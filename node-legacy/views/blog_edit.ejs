@@ -1,0 +1,303 @@
+<%- include('partials/header') %>
+
+<!-- EasyMDE Markdown Editor -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.css">
+<script src="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<!-- 自动保存组件 -->
+<script src="/js/autosave.js"></script>
+<script src="/js/versionHistory.js"></script>
+
+<div class="row animate__animated animate__fadeIn">
+    <div class="col-md-10 offset-md-1">
+        <div class="card shadow-lg border-0 mt-5">
+            <div class="card-body p-5">
+                <h2 class="mb-4 pb-3 border-bottom text-primary fw-bold"><i class="fa-solid fa-pen-to-square me-2"></i> 编辑文章</h2>
+
+                <form action="/blog/edit/<%= blog._id %>" method="POST" enctype="multipart/form-data">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-4">
+                                <label for="title" class="form-label fw-bold text-muted">文章标题</label>
+                                <input type="text" class="form-control form-control-lg border-0 bg-light" id="title" name="title" required value="<%= blog.title %>" style="font-size: 1.5rem;">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-4">
+                                <label for="image" class="form-label fw-bold text-muted">封面图片 (可选)</label>
+                                <input type="file" class="form-control" id="image" name="image" accept="image/*">
+                                <% if (blog.image) { %>
+                                    <div class="mt-2">
+                                        <small class="text-muted">当前封面:</small>
+                                        <img src="<%= blog.image %>" class="img-thumbnail" width="100">
+                                    </div>
+                                <% } %>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="tags" class="form-label fw-bold text-muted">标签 (用逗号分隔)</label>
+                        <input type="text" class="form-control bg-light border-0" id="tags" name="tags" value="<%= blog.tags.join(', ') %>" placeholder="例如: 技术, 生活, Node.js">
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-4">
+                                <label for="category" class="form-label fw-bold text-muted">文章分类</label>
+                                <select class="form-select bg-light border-0" id="category" name="category">
+                                    <option value="">未分类</option>
+                                    <% categories.forEach(cat => { %>
+                                        <option value="<%= cat._id %>" <%= (blog.category && blog.category.toString() === cat._id.toString()) ? 'selected' : '' %>><%= cat.name %></option>
+                                    <% }) %>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-4">
+                                <label class="form-label fw-bold text-muted">可见性</label>
+                                <div class="d-flex gap-4 mt-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="visibility" id="visibilityPublic" value="public" <%= (!blog.visibility || blog.visibility === 'public') ? 'checked' : '' %>>
+                                        <label class="form-check-label" for="visibilityPublic">
+                                            <i class="fa-solid fa-earth-americas me-1"></i> 公开
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="visibility" id="visibilityPrivate" value="private" <%= (blog.visibility === 'private') ? 'checked' : '' %>>
+                                        <label class="form-check-label" for="visibilityPrivate">
+                                            <i class="fa-solid fa-lock me-1"></i> 私密 (仅自己可见)
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="content" class="form-label fw-bold text-muted">正文内容</label>
+                        <textarea class="form-control" id="content" name="content"><%= blog.content %></textarea>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center mt-5">
+                        <!-- 自动保存状态指示器 -->
+                        <div class="autosave-indicator d-flex align-items-center" id="autosaveIndicator">
+                            <span class="save-status save-status-saved text-success d-none">
+                                <i class="fa-solid fa-cloud-check me-1"></i>
+                                <span class="status-text">已保存</span>
+                                <small class="text-muted ms-2" id="lastSavedTime">刚刚</small>
+                            </span>
+                            <span class="save-status save-status-saving text-muted d-none">
+                                <i class="fa-solid fa-spinner fa-spin me-1"></i>
+                                <span class="status-text">保存中...</span>
+                            </span>
+                            <span class="save-status save-status-pending text-warning d-none">
+                                <i class="fa-solid fa-cloud-arrow-up me-1" style="animation: pulse 1.5s ease-in-out infinite;"></i>
+                                <span class="status-text">有未保存更改</span>
+                            </span>
+                            <span class="save-status save-status-error text-danger d-none" style="cursor: pointer;" onclick="window.autosaveManager && window.autosaveManager.retrySave()">
+                                <i class="fa-solid fa-triangle-exclamation me-1"></i>
+                                <span class="status-text">保存失败，点击重试</span>
+                            </span>
+                            <span class="save-status save-status-offline text-secondary d-none">
+                                <i class="fa-solid fa-wifi-slash me-1"></i>
+                                <span class="status-text">离线模式</span>
+                            </span>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <a href="/blog/<%= blog._id %>" class="btn btn-outline-secondary px-4 rounded-pill">取消</a>
+                            <button type="button" class="btn btn-outline-primary px-4 rounded-pill" id="historyBtn">
+                                <i class="fa-solid fa-clock-rotate-left me-1"></i> 历史版本
+                            </button>
+                            <button type="submit" class="btn btn-primary btn-lg px-5 rounded-pill shadow-sm hover-scale">
+                                <i class="fa-solid fa-save me-2"></i> 保存修改
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 版本历史侧边面板 -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="versionHistoryPanel" style="width: 400px;">
+    <div class="offcanvas-header border-bottom">
+        <h5 class="offcanvas-title fw-bold">
+            <i class="fa-solid fa-clock-rotate-left me-2 text-primary"></i>历史版本
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body p-0">
+        <div class="version-stats bg-light p-3 border-bottom">
+            <div class="d-flex justify-content-between">
+                <span class="text-muted">共 <strong id="totalVersions">0</strong> 个版本</span>
+            </div>
+        </div>
+        <div class="version-list" id="versionList"></div>
+        <div class="text-center p-3" id="loadMoreVersions" style="display: none;">
+            <button class="btn btn-outline-secondary btn-sm rounded-pill" onclick="versionHistoryManager.loadVersions()">
+                <i class="fa-solid fa-chevron-down me-1"></i> 加载更多
+            </button>
+        </div>
+        <div class="text-center p-4" id="versionLoading" style="display: none;">
+            <div class="spinner-border text-primary"></div>
+        </div>
+        <div class="text-center p-5 text-muted" id="noVersions" style="display: none;">
+            <i class="fa-solid fa-inbox fa-3x mb-3 text-light"></i>
+            <p>暂无历史版本</p>
+        </div>
+    </div>
+</div>
+
+<!-- 版本预览模态框 -->
+<div class="modal fade" id="versionPreviewModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold">
+                    <i class="fa-solid fa-eye me-2 text-primary"></i>版本预览 - v<span id="previewVersionNum"></span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="version-preview-card bg-light p-4 rounded">
+                    <h4 id="previewTitle" class="mb-3"></h4>
+                    <div id="previewBody" class="markdown-body" style="max-height: 60vh; overflow-y: auto;"></div>
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-light rounded-pill" data-bs-dismiss="modal">关闭</button>
+                <button type="button" class="btn btn-success rounded-pill" id="btnRestoreVersion">
+                    <i class="fa-solid fa-rotate-left me-1"></i> 恢复此版本
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+    .autosave-indicator {
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+    .save-status {
+        display: flex;
+        align-items: center;
+    }
+    .version-item {
+        transition: background-color 0.3s ease;
+    }
+    .version-item:hover {
+        background-color: #f8f9fa;
+    }
+    .version-item.version-current {
+        background: linear-gradient(135deg, rgba(232, 180, 184, 0.1), rgba(169, 189, 173, 0.1));
+        border-left: 3px solid var(--primary-color, #E8B4B8);
+    }
+</style>
+
+<script>
+// 初始化 Markdown 编辑器
+const easyMDE = new EasyMDE({
+    element: document.getElementById('content'),
+    spellChecker: false,
+    // 设置初始值为原始 Markdown 内容（如果有）或 HTML 内容
+    initialValue: `<%= blog.rawContent || blog.content %>`,
+    placeholder: '在此挥洒你的灵感...\n\n支持 Markdown 语法：\n# 一级标题\n## 二级标题\n**粗体** *斜体*\n\n```javascript\n// 代码块\nconst hello = "world";\n```\n\n- 列表项 1\n- 列表项 2',
+    toolbar: [
+        'bold', 'italic', 'heading', '|',
+        'quote', 'unordered-list', 'ordered-list', '|',
+        'link', 'image', 'code', 'table', '|',
+        'preview', 'side-by-side', 'fullscreen', '|',
+        'guide'
+    ],
+    autosave: {
+        enabled: false, // 禁用 EasyMDE 内置自动保存，使用我们的服务器端保存
+    },
+    renderingConfig: {
+        codeSyntaxHighlighting: true,
+    },
+    minHeight: '400px',
+});
+
+// 当前博客 ID
+const blogId = '<%= blog._id %>';
+
+// 获取 URL 参数中的草稿 ID
+const urlParams = new URLSearchParams(window.location.search);
+let draftId = urlParams.get('draft');
+
+// 初始化自动保存管理器
+let autosaveManager;
+
+// 查找或创建与此博客关联的草稿
+async function initEditAutosave() {
+    if (!draftId) {
+        // 尝试查找已有的草稿
+        try {
+            const response = await fetch(`/drafts/api?blogId=${blogId}`);
+            const result = await response.json();
+            if (result.success && result.drafts && result.drafts.length > 0) {
+                draftId = result.drafts[0]._id;
+            }
+        } catch (err) {
+            console.error('查找草稿失败:', err);
+        }
+    }
+
+    // 初始化自动保存
+    autosaveManager = new AutosaveManager({
+        editor: easyMDE,
+        draftId: draftId,
+        blogId: blogId,
+        debounceDelay: 3000,
+        indicatorEl: '#autosaveIndicator',
+        onSaved: function(result) {
+            draftId = result.draft._id;
+            // 初始化版本历史管理器
+            if (window.versionHistoryManager) {
+                window.versionHistoryManager.setDraftId(result.draft._id);
+            }
+        }
+    });
+    window.autosaveManager = autosaveManager;
+
+    // 初始化版本历史管理器
+    window.versionHistoryManager = new VersionHistoryManager({
+        draftId: draftId,
+        offcanvasEl: '#versionHistoryPanel',
+        listContainer: '#versionList',
+        onRestore: function(draft) {
+            // 恢复内容到编辑器
+            document.getElementById('title').value = draft.title || '';
+            easyMDE.value(draft.content || '');
+            if (draft.category) {
+                document.getElementById('category').value = draft.category;
+            }
+            if (draft.tags && draft.tags.length > 0) {
+                document.getElementById('tags').value = draft.tags.join(', ');
+            }
+            if (draft.visibility) {
+                document.querySelector(`input[name="visibility"][value="${draft.visibility}"]`).checked = true;
+            }
+        }
+    });
+}
+
+initEditAutosave();
+
+// 历史版本按钮点击
+document.getElementById('historyBtn').addEventListener('click', function() {
+    if (window.versionHistoryManager) {
+        window.versionHistoryManager.open();
+    }
+});
+</script>
+
+<%- include('partials/footer') %>

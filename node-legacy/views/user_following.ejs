@@ -1,0 +1,111 @@
+<%- include('partials/header') %>
+
+<div class="row animate__animated animate__fadeIn">
+    <div class="col-md-8 offset-md-2">
+        <!-- Header -->
+        <div class="d-flex align-items-center mb-4 pb-3 border-bottom">
+            <a href="/profile" class="btn btn-outline-secondary btn-sm rounded-pill me-3">
+                <i class="fa-solid fa-arrow-left me-1"></i> 返回
+            </a>
+            <h3 class="mb-0 fw-bold">
+                <i class="fa-solid fa-user-plus me-2 text-primary"></i>
+                <%= targetUser.username %> 的关注列表
+            </h3>
+        </div>
+
+        <!-- Following Count -->
+        <div class="alert alert-info mb-4">
+            <i class="fa-solid fa-info-circle me-2"></i>
+            共关注了 <strong><%= following.length %></strong> 位用户
+        </div>
+
+        <!-- Following List -->
+        <% if (following.length > 0) { %>
+            <div class="row">
+                <% following.forEach(followedUser => { %>
+                    <div class="col-md-6 mb-3">
+                        <div class="card shadow-sm border-0 h-100 hover-shadow transition">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <!-- Avatar -->
+                                    <img src="<%= followedUser.avatar || 'https://ui-avatars.com/api/?name=' + followedUser.username + '&background=random' %>"
+                                         class="rounded-circle me-3"
+                                         width="60"
+                                         height="60"
+                                         style="object-fit: cover;">
+
+                                    <!-- User Info -->
+                                    <div class="flex-grow-1">
+                                        <h5 class="mb-1 fw-bold">
+                                            <a href="/profile/<%= followedUser._id %>" class="text-decoration-none text-dark hover-primary">
+                                                <%= followedUser.username %>
+                                            </a>
+                                        </h5>
+                                        <p class="text-muted small mb-0">
+                                            <%= followedUser.bio || '这位用户很懒，什么都没写。' %>
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <!-- Action Buttons -->
+                                <% if (user && user._id.toString() !== followedUser._id.toString()) { %>
+                                    <div class="mt-3 text-end">
+                                        <button class="btn btn-sm btn-outline-primary rounded-pill follow-btn"
+                                                data-user-id="<%= followedUser._id %>"
+                                                data-following="<%= user.following && user.following.includes(followedUser._id.toString()) ? 'true' : 'false' %>">
+                                            <i class="fa-solid <%= user.following && user.following.includes(followedUser._id.toString()) ? 'fa-user-check' : 'fa-user-plus' %> me-1"></i>
+                                            <span class="follow-text"><%= user.following && user.following.includes(followedUser._id.toString()) ? '已关注' : '关注' %></span>
+                                        </button>
+                                    </div>
+                                <% } %>
+                            </div>
+                        </div>
+                    </div>
+                <% }) %>
+            </div>
+        <% } else { %>
+            <div class="text-center py-5 bg-white rounded shadow-sm">
+                <i class="fa-solid fa-user-group fa-3x mb-3 text-light"></i>
+                <p class="text-muted">还没有关注任何人</p>
+                <a href="/" class="btn btn-primary rounded-pill mt-2">
+                    <i class="fa-solid fa-home me-1"></i> 去首页逛逛
+                </a>
+            </div>
+        <% } %>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function () {
+        // 关注/取消关注按钮
+        $('.follow-btn').click(function () {
+            const btn = $(this);
+            const targetUserId = btn.data('user-id');
+            const isFollowing = btn.data('following') === 'true';
+            const url = '/user/' + targetUserId + '/' + (isFollowing ? 'unfollow' : 'follow');
+
+            $.post(url, function (data) {
+                if (data.success) {
+                    if (data.following) {
+                        btn.data('following', 'true');
+                        btn.removeClass('btn-outline-primary').addClass('btn-primary');
+                        btn.find('i').removeClass('fa-user-plus').addClass('fa-user-check');
+                        btn.find('.follow-text').text('已关注');
+                        btn.addClass('animate__animated animate__tada');
+                        setTimeout(() => btn.removeClass('animate__animated animate__tada'), 1000);
+                    } else {
+                        btn.data('following', 'false');
+                        btn.removeClass('btn-primary').addClass('btn-outline-primary');
+                        btn.find('i').removeClass('fa-user-check').addClass('fa-user-plus');
+                        btn.find('.follow-text').text('关注');
+                    }
+                }
+            }).fail(function (xhr) {
+                const error = xhr.responseJSON && xhr.responseJSON.error ? xhr.responseJSON.error : '操作失败';
+                alert(error);
+            });
+        });
+    });
+</script>
+
+<%- include('partials/footer') %>

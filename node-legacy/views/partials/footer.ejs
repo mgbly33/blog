@@ -1,0 +1,142 @@
+</div> <!-- End Main Content -->
+
+<footer class="footer-custom pt-5 pb-3 mt-5">
+    <div class="container text-dark">
+        <div class="row">
+            <div class="col-md-4 mb-4 animate__animated animate__fadeInUp">
+                <h5 class="fw-bold mb-3"><i class="fa-solid fa-feather-pointed text-primary me-2"></i>听见思想的声音</h5>
+                <p class="text-muted small">
+                    在这里，每一个文字都有温度，每一种思想都值得被聆听。<br>
+                    基于 Node.js 构建的高性能现代化博客系统。
+                </p>
+                <div class="social-icons mt-4">
+                    <a href="#" class="text-dark me-4"><i class="fa-brands fa-github fa-lg opacity-75"></i></a>
+                    <a href="#" class="text-dark me-4"><i class="fa-brands fa-twitter fa-lg opacity-75"></i></a>
+                    <a href="#" class="text-dark"><i class="fa-brands fa-instagram fa-lg opacity-75"></i></a>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4 animate__animated animate__fadeInUp" style="animation-delay: 0.1s;">
+                <h5 class="fw-bold mb-3">探索角落</h5>
+                <ul class="list-unstyled small footer-links">
+                    <li class="mb-2"><a href="/" class="text-decoration-none text-muted hover-primary">精选辑录</a></li>
+                    <li class="mb-2"><a href="#" class="text-decoration-none text-muted hover-primary">深度专栏</a></li>
+                    <li class="mb-2"><a href="#" class="text-decoration-none text-muted hover-primary">生活影像</a></li>
+                    <li class="mb-2"><a href="/register" class="text-decoration-none text-muted hover-primary">加入社区</a>
+                    </li>
+                </ul>
+            </div>
+            <div class="col-md-4 mb-4 animate__animated animate__fadeInUp" style="animation-delay: 0.2s;">
+                <h5 class="fw-bold mb-3">订阅墨迹</h5>
+                <p class="text-muted small">获取最新的文字动态与技术漫谈。</p>
+                <div class="input-group mb-3 glass-clay p-1" style="box-shadow: none; border-radius: 50px;">
+                    <input type="email" class="form-control border-0 bg-transparent px-3" placeholder="您的邮箱地址">
+                    <button class="btn btn-primary rounded-pill px-4" type="button"><i
+                            class="fa-solid fa-paper-plane"></i></button>
+                </div>
+            </div>
+        </div>
+        <hr class="my-4 opacity-10">
+        <div class="row align-items-center">
+            <div class="col-md-6 text-center text-md-start">
+                <p class="small text-muted mb-0">&copy; 2026 听见思想的声音. 用心设计，用爱编码。</p>
+            </div>
+            <div class="col-md-6 text-center text-md-end">
+                <p class="small text-muted mb-0">隐私准则 | 服务条款</p>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<!-- Bootstrap JS Bundle -->
+<script src="/js/bootstrap.bundle.min.js"></script>
+<!-- Custom JS -->
+<script src="/js/custom.js"></script>
+
+<% if (user) { %>
+    <!-- 通知系统 -->
+    <script>
+        // 更新未读通知数量
+        function updateUnreadCount() {
+            fetch('/api/notifications/unread-count')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        const count = data.count;
+                        const badge = document.getElementById('unread-count');
+                        const menuBadge = document.getElementById('unread-count-menu');
+
+                        if (count > 0) {
+                            badge.textContent = count > 99 ? '99+' : count;
+                            badge.style.display = 'inline';
+                            if (menuBadge) {
+                                menuBadge.textContent = count;
+                                menuBadge.style.display = 'inline';
+                            }
+                        } else {
+                            badge.style.display = 'none';
+                            if (menuBadge) {
+                                menuBadge.style.display = 'none';
+                            }
+                        }
+                    }
+                })
+                .catch(err => console.error('获取未读通知失败:', err));
+        }
+
+        // 页面加载时更新
+        updateUnreadCount();
+
+        // 每30秒更新一次
+        setInterval(updateUnreadCount, 30000);
+    </script>
+    <% } %>
+
+        <!-- 搜索建议 -->
+        <script>
+            $(document).ready(function () {
+                let searchTimer;
+                const searchInput = $('#search-input');
+                const suggestions = $('#search-suggestions');
+
+                searchInput.on('input', function () {
+                    clearTimeout(searchTimer);
+                    const query = $(this).val().trim();
+
+                    if (query.length >= 2) {
+                        searchTimer = setTimeout(function () {
+                            $.get(`/api/search/suggestions?q=${encodeURIComponent(query)}`, function (data) {
+                                if (data.success && data.suggestions.length > 0) {
+                                    let html = '<ul class="list-group">';
+                                    data.suggestions.forEach(function (title) {
+                                        html += `<li class="list-group-item list-group-item-action suggestion-item" style="cursor: pointer;">${title}</li>`;
+                                    });
+                                    html += '</ul>';
+                                    suggestions.html(html).show();
+
+                                    // 点击建议项进行搜索
+                                    $('.suggestion-item').on('click', function () {
+                                        const selectedTitle = $(this).text();
+                                        searchInput.val(selectedTitle);
+                                        searchInput.closest('form').submit();
+                                    });
+                                } else {
+                                    suggestions.hide();
+                                }
+                            });
+                        }, 300);
+                    } else {
+                        suggestions.hide();
+                    }
+                });
+
+                // 点击其他地方隐藏建议
+                $(document).on('click', function (e) {
+                    if (!$(e.target).closest('.search-form').length) {
+                        suggestions.hide();
+                    }
+                });
+            });
+        </script>
+        </body>
+
+        </html>

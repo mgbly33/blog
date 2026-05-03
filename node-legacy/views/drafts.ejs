@@ -1,0 +1,300 @@
+<%- include('partials/header') %>
+
+<div class="container py-4">
+    <!-- 页面标题 -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">
+                <i class="fa-solid fa-file-pen me-2 text-primary"></i>我的草稿
+            </h2>
+            <p class="text-muted mb-0">共 <%= totalDrafts %> 篇草稿</p>
+        </div>
+        <a href="/blog/new" class="btn btn-primary rounded-pill px-4">
+            <i class="fa-solid fa-plus me-2"></i>新建文章
+        </a>
+    </div>
+
+    <% if (drafts && drafts.length > 0) { %>
+        <!-- 草稿列表 -->
+        <div class="row">
+            <div class="col-12">
+                <% drafts.forEach(draft => { %>
+                    <div class="draft-card card shadow-sm border-0 mb-3">
+                        <div class="card-body">
+                            <!-- 标题和状态 -->
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h5 class="card-title fw-bold mb-0">
+                                    <a href="/blog/new?draft=<%= draft._id %>" class="text-decoration-none text-dark draft-title-link">
+                                        <%= draft.title || '无标题草稿' %>
+                                    </a>
+                                </h5>
+                                <div>
+                                    <% if (draft.blogId) { %>
+                                        <span class="badge bg-info">编辑中</span>
+                                    <% } else { %>
+                                        <span class="badge bg-secondary">新建</span>
+                                    <% } %>
+                                </div>
+                            </div>
+
+                            <!-- 摘要 -->
+                            <p class="text-muted small mb-3">
+                                <%= draft.summary || '暂无内容' %>...
+                            </p>
+
+                            <!-- 元信息和操作 -->
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="draft-meta text-muted small">
+                                    <span class="me-3">
+                                        <i class="fa-solid fa-font me-1"></i> <%= draft.wordCount || 0 %> 字
+                                    </span>
+                                    <span class="me-3">
+                                        <i class="fa-solid fa-clock-rotate-left me-1"></i> v<%= draft.currentVersion || 1 %>
+                                    </span>
+                                    <span>
+                                        <i class="fa-regular fa-clock me-1"></i>
+                                        <%
+                                            const updatedAt = new Date(draft.updatedAt);
+                                            const now = new Date();
+                                            const diffMs = now - updatedAt;
+                                            const diffMins = Math.floor(diffMs / 60000);
+                                            const diffHours = Math.floor(diffMs / 3600000);
+                                            const diffDays = Math.floor(diffMs / 86400000);
+
+                                            if (diffMins < 1) { %>
+                                                刚刚
+                                            <% } else if (diffMins < 60) { %>
+                                                <%= diffMins %> 分钟前
+                                            <% } else if (diffHours < 24) { %>
+                                                <%= diffHours %> 小时前
+                                            <% } else { %>
+                                                <%= diffDays %> 天前
+                                            <% } %>
+                                    </span>
+                                </div>
+
+                                <div class="draft-actions">
+                                    <a href="/blog/new?draft=<%= draft._id %>" class="btn btn-primary btn-sm rounded-pill px-3">
+                                        <i class="fa-solid fa-pen me-1"></i> 继续编辑
+                                    </a>
+                                    <button class="btn btn-outline-secondary btn-sm rounded-pill"
+                                            onclick="viewVersions('<%= draft._id %>')"
+                                            title="历史版本">
+                                        <i class="fa-solid fa-clock-rotate-left"></i>
+                                    </button>
+                                    <button class="btn btn-outline-danger btn-sm rounded-pill"
+                                            onclick="confirmDelete('<%= draft._id %>', '<%= (draft.title || '无标题草稿').replace(/'/g, "\\'") %>')"
+                                            title="删除">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- 进度条 -->
+                        <div class="progress" style="height: 3px; border-radius: 0;">
+                            <%
+                                // 计算完成度（基于标题和内容长度）
+                                let completeness = 0;
+                                if (draft.title && draft.title !== '无标题草稿') completeness += 30;
+                                if (draft.wordCount > 100) completeness += 40;
+                                else if (draft.wordCount > 0) completeness += draft.wordCount * 0.4;
+                                if (draft.category) completeness += 15;
+                                if (draft.tags && draft.tags.length > 0) completeness += 15;
+                                completeness = Math.min(100, completeness);
+                            %>
+                            <div class="progress-bar bg-primary" style="width: <%= completeness %>%"></div>
+                        </div>
+                    </div>
+                <% }) %>
+            </div>
+        </div>
+
+        <!-- 分页 -->
+        <% if (totalPages > 1) { %>
+            <nav aria-label="草稿分页" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    <% if (currentPage > 1) { %>
+                        <li class="page-item">
+                            <a class="page-link" href="/drafts?page=<%= currentPage - 1 %>">上一页</a>
+                        </li>
+                    <% } %>
+
+                    <% for (let i = 1; i <= totalPages; i++) { %>
+                        <li class="page-item <%= currentPage === i ? 'active' : '' %>">
+                            <a class="page-link" href="/drafts?page=<%= i %>"><%= i %></a>
+                        </li>
+                    <% } %>
+
+                    <% if (currentPage < totalPages) { %>
+                        <li class="page-item">
+                            <a class="page-link" href="/drafts?page=<%= currentPage + 1 %>">下一页</a>
+                        </li>
+                    <% } %>
+                </ul>
+            </nav>
+        <% } %>
+
+    <% } else { %>
+        <!-- 空状态 -->
+        <div class="text-center py-5">
+            <i class="fa-solid fa-file-circle-plus fa-4x text-muted mb-4"></i>
+            <h4 class="text-muted mb-3">暂无草稿</h4>
+            <p class="text-muted mb-4">开始创作你的第一篇文章吧</p>
+            <a href="/blog/new" class="btn btn-primary btn-lg rounded-pill px-5">
+                <i class="fa-solid fa-pen me-2"></i>开始创作
+            </a>
+        </div>
+    <% } %>
+</div>
+
+<!-- 删除确认模态框 -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold">
+                    <i class="fa-solid fa-triangle-exclamation text-danger me-2"></i>确认删除
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>确定要删除草稿 "<span id="deleteDraftTitle"></span>" 吗？</p>
+                <p class="text-muted small">此操作不可恢复，草稿的所有历史版本也将被删除。</p>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-light rounded-pill" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-danger rounded-pill" id="confirmDeleteBtn">
+                    <i class="fa-solid fa-trash me-1"></i>删除
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 版本历史模态框（简化版，用于列表页） -->
+<div class="modal fade" id="versionsModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold">
+                    <i class="fa-solid fa-clock-rotate-left text-primary me-2"></i>历史版本
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="versionsModalBody">
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary"></div>
+                    <p class="text-muted mt-2">加载中...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .draft-card {
+        border-radius: 12px;
+        transition: all 0.3s ease;
+        border-left: 4px solid transparent;
+        overflow: hidden;
+    }
+    .draft-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1) !important;
+        border-left-color: var(--primary-color, #E8B4B8);
+    }
+    .draft-title-link {
+        transition: color 0.3s ease;
+    }
+    .draft-title-link:hover {
+        color: var(--primary-color, #E8B4B8) !important;
+    }
+    .draft-actions .btn {
+        padding: 0.25rem 0.75rem;
+        font-size: 0.8rem;
+    }
+    .draft-meta {
+        font-size: 0.8rem;
+    }
+</style>
+
+<script>
+    let deleteModal, versionsModal;
+    let currentDeleteId = null;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        deleteModal = new bootstrap.Modal('#deleteModal');
+        versionsModal = new bootstrap.Modal('#versionsModal');
+    });
+
+    function confirmDelete(draftId, title) {
+        currentDeleteId = draftId;
+        document.getElementById('deleteDraftTitle').textContent = title;
+        deleteModal.show();
+    }
+
+    document.getElementById('confirmDeleteBtn').addEventListener('click', async function() {
+        if (!currentDeleteId) return;
+
+        try {
+            const response = await fetch(`/drafts/api/${currentDeleteId}`, {
+                method: 'DELETE'
+            });
+            const result = await response.json();
+
+            if (result.success) {
+                deleteModal.hide();
+                window.location.reload();
+            } else {
+                alert(result.message || '删除失败');
+            }
+        } catch (error) {
+            console.error('Delete error:', error);
+            alert('删除失败');
+        }
+    });
+
+    async function viewVersions(draftId) {
+        versionsModal.show();
+        const modalBody = document.getElementById('versionsModalBody');
+        modalBody.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary"></div><p class="text-muted mt-2">加载中...</p></div>';
+
+        try {
+            const response = await fetch(`/drafts/api/${draftId}/versions`);
+            const result = await response.json();
+
+            if (result.success && result.versions.length > 0) {
+                let html = '<div class="list-group">';
+                result.versions.forEach((v, i) => {
+                    const isCurrent = i === 0;
+                    html += `
+                        <div class="list-group-item ${isCurrent ? 'list-group-item-primary' : ''}">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>v${v.versionNumber}</strong>
+                                    ${isCurrent ? '<span class="badge bg-primary ms-2">当前</span>' : ''}
+                                    <div class="text-muted small">${new Date(v.createdAt).toLocaleString('zh-CN')}</div>
+                                </div>
+                                <div>
+                                    <span class="text-muted small me-3">${v.wordCount || 0} 字</span>
+                                    <span class="badge ${v.changeType === 'auto' ? 'bg-secondary' : v.changeType === 'manual' ? 'bg-success' : 'bg-warning'}">
+                                        ${v.changeType === 'auto' ? '自动保存' : v.changeType === 'manual' ? '手动保存' : '版本恢复'}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                modalBody.innerHTML = html;
+            } else {
+                modalBody.innerHTML = '<div class="text-center py-4 text-muted"><i class="fa-solid fa-inbox fa-3x mb-3"></i><p>暂无历史版本</p></div>';
+            }
+        } catch (error) {
+            console.error('Load versions error:', error);
+            modalBody.innerHTML = '<div class="text-center py-4 text-danger"><i class="fa-solid fa-exclamation-triangle fa-2x mb-2"></i><p>加载失败</p></div>';
+        }
+    }
+</script>
+
+<%- include('partials/footer') %>

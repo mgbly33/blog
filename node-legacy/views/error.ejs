@@ -1,0 +1,38 @@
+<%- include('partials/header') %>
+
+    <div class="container my-5 pt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6 text-center animate__animated animate__fadeIn">
+                <div class="error-container p-5 bg-white rounded-4 shadow-lg">
+                    <h1 class="display-1 fw-bold text-primary mb-3">
+                        <%= error.status || 500 %>
+                    </h1>
+                    <h2 class="h4 text-dark mb-4">
+                        <%= message %>
+                    </h2>
+                    <p class="text-muted mb-5">抱歉，服务器在休息或者页面飞走了，请稍后再试或返回首页。</p>
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                        <a href="/" class="btn btn-primary btn-lg rounded-pill px-5">
+                            <i class="fa-solid fa-house me-2"></i> 返回首页
+                        </a>
+                        <% if (process.env.NODE_ENV==='development' && error.stack) { %>
+                            <button class="btn btn-outline-secondary btn-lg rounded-pill px-4" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#errorDetail">
+                                查看详情
+                            </button>
+                            <% } %>
+                    </div>
+
+                    <% if (process.env.NODE_ENV==='development' && error.stack) { %>
+                        <div class="collapse mt-4 text-start" id="errorDetail">
+                            <div class="bg-light p-3 rounded">
+                                <pre class="small text-danger mb-0 overflow-auto"><code><%= error.stack %></code></pre>
+                            </div>
+                        </div>
+                        <% } %>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <%- include('partials/footer') %>

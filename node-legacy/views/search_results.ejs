@@ -1,0 +1,107 @@
+<%- include('partials/header') %>
+
+<div class="container mt-5 animate__animated animate__fadeIn">
+    <div class="row">
+        <div class="col-md-10 offset-md-1">
+            <!-- 搜索框 -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <form action="/search" method="GET">
+                        <div class="input-group input-group-lg">
+                            <input type="text" class="form-control" name="q" value="<%= query %>"
+                                   placeholder="搜索文章标题、内容..." required>
+                            <button class="btn btn-primary px-4" type="submit">
+                                <i class="fa-solid fa-magnifying-glass me-2"></i>搜索
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 搜索结果 -->
+            <div class="mb-4">
+                <h4 class="text-muted">
+                    <% if (query) { %>
+                        搜索 "<%= query %>" 找到 <strong><%= totalResults %></strong> 篇文章
+                    <% } else { %>
+                        请输入搜索关键词
+                    <% } %>
+                </h4>
+            </div>
+
+            <!-- 文章列表 -->
+            <% if (blogs && blogs.length > 0) { %>
+                <% blogs.forEach(blog => { %>
+                    <article class="card shadow-sm mb-3 hover-card">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <h5 class="card-title">
+                                        <a href="/blog/<%= blog._id %>" class="text-decoration-none text-dark fw-bold">
+                                            <%= blog.title %>
+                                        </a>
+                                    </h5>
+
+                                    <!-- 摘要 -->
+                                    <% if (blog.summary) { %>
+                                        <p class="text-muted mb-2"><%= blog.summary.substring(0, 150) %>...</p>
+                                    <% } %>
+
+                                    <!-- 标签 -->
+                                    <% if (blog.tags && blog.tags.length > 0) { %>
+                                        <div class="mb-2">
+                                            <% blog.tags.forEach(tag => { %>
+                                                <a href="/tag/<%= tag._id %>" class="badge rounded-pill me-1"
+                                                   style="background-color: <%= tag.color || '#007bff' %>; text-decoration: none;">
+                                                    # <%= tag.name %>
+                                                </a>
+                                            <% }) %>
+                                        </div>
+                                    <% } %>
+
+                                    <!-- 元信息 -->
+                                    <div class="d-flex align-items-center text-muted small">
+                                        <img src="<%= blog.author.avatar %>" class="rounded-circle me-2" width="24" height="24" alt="<%= blog.author.username %>">
+                                        <span class="me-3"><%= blog.author.username %></span>
+                                        <i class="fa-solid fa-eye me-1"></i>
+                                        <span class="me-3"><%= blog.views %></span>
+                                        <i class="fa-solid fa-heart me-1"></i>
+                                        <span class="me-3"><%= blog.likes ? blog.likes.length : 0 %></span>
+                                        <i class="fa-solid fa-clock me-1"></i>
+                                        <span><%= new Date(blog.createdAt).toLocaleDateString() %></span>
+                                    </div>
+                                </div>
+
+                                <% if (blog.image) { %>
+                                    <img src="<%= blog.image %>" class="ms-3 rounded" width="120" height="80" style="object-fit: cover;" alt="<%= blog.title %>" loading="lazy">
+                                <% } %>
+                            </div>
+                        </div>
+                    </article>
+                <% }) %>
+
+                <!-- 分页 -->
+                <% if (totalPages > 1) { %>
+                    <nav aria-label="搜索结果分页">
+                        <ul class="pagination justify-content-center">
+                            <% for (let i = 1; i <= totalPages; i++) { %>
+                                <li class="page-item <%= i === currentPage ? 'active' : '' %>">
+                                    <a class="page-link" href="/search?q=<%= encodeURIComponent(query) %>&page=<%= i %>">
+                                        <%= i %>
+                                    </a>
+                                </li>
+                            <% } %>
+                        </ul>
+                    </nav>
+                <% } %>
+            <% } else if (query) { %>
+                <div class="alert alert-info text-center">
+                    <i class="fa-solid fa-circle-info me-2"></i>
+                    没有找到相关文章，请尝试其他关键词
+                </div>
+            <% } %>
+        </div>
+    </div>
+</div>
+
+<%- include('partials/footer') %>

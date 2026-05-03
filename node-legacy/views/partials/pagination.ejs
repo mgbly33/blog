@@ -1,0 +1,66 @@
+<% if (totalPages> 1) { %>
+    <nav aria-label="Page navigation" class="modern-pagination my-5">
+        <ul class="pagination pagination-lg justify-content-center gap-2">
+            <!-- Previous Page -->
+            <li class="page-item <%= currentPage === 1 ? 'disabled' : '' %>">
+                <a class="page-link glass-clay rounded-circle d-flex align-items-center justify-content-center"
+                    href="?page=<%= currentPage - 1 %><%= typeof sort !== 'undefined' ? '&sort=' + sort : '' %><%= typeof currentCategory !== 'undefined' && currentCategory ? '&category=' + currentCategory : '' %><%= typeof query !== 'undefined' && query ? '&q=' + query : '' %>"
+                    aria-label="Previous" style="width: 50px; height: 50px; border: none; color: var(--deep-coffee);">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </a>
+            </li>
+
+            <!-- Page Numbers -->
+            <% let startPage=Math.max(1, currentPage - 2); let endPage=Math.min(totalPages, startPage + 4); if (endPage
+                - startPage < 4) { startPage=Math.max(1, endPage - 4); } %>
+
+                <% if (startPage> 1) { %>
+                    <li class="page-item">
+                        <a class="page-link glass-clay rounded-circle d-flex align-items-center justify-content-center"
+                            href="?page=1<%= typeof sort !== 'undefined' ? '&sort=' + sort : '' %><%= typeof currentCategory !== 'undefined' && currentCategory ? '&category=' + currentCategory : '' %><%= typeof query !== 'undefined' && query ? '&q=' + query : '' %>"
+                            style="width: 50px; height: 50px; border: none; color: var(--deep-coffee);">1</a>
+                    </li>
+                    <% if (startPage> 2) { %>
+                        <li class="page-item disabled"><span class="page-link border-0 bg-transparent"
+                                style="color: var(--deep-coffee);">...</span></li>
+                        <% } %>
+                            <% } %>
+
+                                <% for(let i=startPage; i <=endPage; i++) { %>
+                                    <li class="page-item <%= currentPage === i ? 'active' : '' %>">
+                                        <a class="page-link <%= currentPage === i ? 'shadow-sm' : 'glass-clay' %> rounded-circle d-flex align-items-center justify-content-center"
+                                            href="?page=<%= i %><%= typeof sort !== 'undefined' ? '&sort=' + sort : '' %><%= typeof currentCategory !== 'undefined' && currentCategory ? '&category=' + currentCategory : '' %><%= typeof query !== 'undefined' && query ? '&q=' + query : '' %>"
+                                            style="width: 50px; height: 50px; border: none; <%= currentPage === i ? 'background: var(--deep-coffee); color: white;' : 'color: var(--deep-coffee);' %>">
+                                            <%= i %>
+                                        </a>
+                                    </li>
+                                    <% } %>
+
+                                        <% if (endPage < totalPages) { %>
+                                            <% if (endPage < totalPages - 1) { %>
+                                                <li class="page-item disabled"><span
+                                                        class="page-link border-0 bg-transparent"
+                                                        style="color: var(--deep-coffee);">...</span></li>
+                                                <% } %>
+                                                    <li class="page-item">
+                                                        <a class="page-link glass-clay rounded-circle d-flex align-items-center justify-content-center"
+                                                            href="?page=<%= totalPages %><%= typeof sort !== 'undefined' ? '&sort=' + sort : '' %><%= typeof currentCategory !== 'undefined' && currentCategory ? '&category=' + currentCategory : '' %><%= typeof query !== 'undefined' && query ? '&q=' + query : '' %>"
+                                                            style="width: 50px; height: 50px; border: none; color: var(--deep-coffee);">
+                                                            <%= totalPages %>
+                                                        </a>
+                                                    </li>
+                                                    <% } %>
+
+                                                        <!-- Next Page -->
+                                                        <li
+                                                            class="page-item <%= currentPage === totalPages ? 'disabled' : '' %>">
+                                                            <a class="page-link glass-clay rounded-circle d-flex align-items-center justify-content-center"
+                                                                href="?page=<%= currentPage + 1 %><%= typeof sort !== 'undefined' ? '&sort=' + sort : '' %><%= typeof currentCategory !== 'undefined' && currentCategory ? '&category=' + currentCategory : '' %><%= typeof query !== 'undefined' && query ? '&q=' + query : '' %>"
+                                                                aria-label="Next"
+                                                                style="width: 50px; height: 50px; border: none; color: var(--deep-coffee);">
+                                                                <i class="fa-solid fa-chevron-right"></i>
+                                                            </a>
+                                                        </li>
+        </ul>
+    </nav>
+    <% } %>

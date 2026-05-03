@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- 预加载关键资源 -->
+    <link rel="preload" href="/css/bootstrap.min.css" as="style">
+    <link rel="preload" href="/css/style.css?v=2.6" as="style">
+    <link rel="preload" href="/js/jquery.min.js" as="script">
+    <link rel="preconnect" href="https://cdn.bootcdn.net" crossorigin>
+    <link rel="dns-prefetch" href="https://cdn.bootcdn.net">
+    <link rel="preconnect" href="https://ui-avatars.com" crossorigin>
+    <link rel="dns-prefetch" href="https://ui-avatars.com">
+
+    <title>
+        <%= locals.metaTitle || locals.pageTitle || '听见思想的声音' %>
+    </title>
+    <meta name="description" content="<%= locals.metaDescription || locals.pageDescription || '探索技术与人文的交汇点' %>">
+    <meta name="keywords" content="<%= locals.metaKeywords || locals.pageKeywords || '博客,技术,人文' %>">
+    <meta name="author" content="个人博客系统">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="<%= locals.pageType || 'website' %>">
+    <meta property="og:url" content="<%= locals.pageUrl || 'http://localhost:3000' %>">
+    <meta property="og:title" content="<%= locals.metaTitle || locals.pageTitle || '听见思想的声音' %>">
+    <meta property="og:description" content="<%= locals.metaDescription || locals.pageDescription || '探索技术与人文的交汇点' %>">
+    <meta property="og:image" content="<%= locals.metaImage || locals.pageImage || '/img/default-og-image.jpg' %>">
+    <meta property="og:site_name" content="个人博客系统">
+
+    <!-- Bootstrap CSS -->
+    <link href="/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Animate.css -->
+    <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/animate.css/4.1.1/animate.min.css" />
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/css/style.css?v=2.6">
+    <!-- jQuery -->
+    <script src="/js/jquery.min.js"></script>
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light fixed-top glass-nav">
+        <div class="container">
+            <a class="navbar-brand animate__animated animate__fadeInLeft" href="/">
+                <i class="fa-solid fa-feather-pointed me-2" style="color: var(--primary-color);"></i>听见思想的声音
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item"><a class="nav-link" href="/"><i class="fa-solid fa-house-chimney me-1"></i>
+                            首页</a></li>
+                    <% if (locals.user) { %>
+                        <li class="nav-item"><a class="nav-link" href="/blog/new"><i
+                                    class="fa-solid fa-feather me-1"></i> 创作</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/drafts"><i
+                                    class="fa-solid fa-file-pen me-1"></i> 草稿</a></li>
+                        <% } %>
+                </ul>
+                <ul class="navbar-nav align-items-center">
+                    <li class="nav-item">
+                        <form class="d-flex me-3 search-form" action="/search" method="GET">
+                            <div class="input-group input-group-sm">
+                                <input class="form-control bg-white border-0" type="search" placeholder="搜索文章..."
+                                    name="q" id="search-input"
+                                    style="box-shadow: var(--soft-shadow); border-radius: 20px 0 0 20px !important; padding: 0.5rem 1rem;"
+                                    value="<%= typeof searchQuery !== 'undefined' ? searchQuery : '' %>"
+                                    autocomplete="off">
+                                <button class="btn btn-primary" type="submit"
+                                    style="border-radius: 0 20px 20px 0 !important;"><i
+                                        class="fa-solid fa-search"></i></button>
+                            </div>
+                        </form>
+                    </li>
+                    <% if (locals.user) { %>
+                        <li class="nav-item">
+                            <a href="/notifications" class="nav-link position-relative mx-2" id="notifications-link">
+                                <i class="fa-solid fa-bell-concierge fs-5"></i>
+                                <span
+                                    class="position-absolute top-1 start-100 translate-middle badge rounded-pill bg-danger"
+                                    id="unread-count" style="display: none; font-size: 0.6rem;">
+                                    0
+                                </span>
+                            </a>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle user-dropdown d-flex align-items-center" href="#"
+                                role="button" data-bs-toggle="dropdown">
+                                <img src="<%= user.avatar || 'https://ui-avatars.com/api/?name=' + user.username + '&background=random' %>"
+                                    class="rounded-circle me-2 shadow-sm" width="32" height="32">
+                                <span class="fw-bold text-dark">
+                                    <%= user.username %>
+                                </span>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0"
+                                style="border-radius: var(--radius-md); padding: 0.75rem;">
+                                <% if (user.isAdmin) { %>
+                                    <li><a class="dropdown-item rounded-3 mb-1" href="/admin"><i
+                                                class="fa-solid fa-gauge-high me-2 text-primary"></i> 仪表盘</a></li>
+                                    <li>
+                                        <hr class="dropdown-divider">
+                                    </li>
+                                    <% } %>
+                                        <li><a class="dropdown-item rounded-3 mb-1" href="/profile"><i
+                                                    class="fa-solid fa-user-gear me-2"></i> 个人中心</a></li>
+                                        <li><a class="dropdown-item rounded-3 mb-1" href="/notifications"><i
+                                                    class="fa-solid fa-bell me-2"></i> 通知中心</a></li>
+                                        <li>
+                                            <form action="/logout" method="POST" class="d-inline">
+                                                <button type="submit"
+                                                    class="dropdown-item rounded-3 text-danger">
+                                                    <i class="fa-solid fa-right-from-bracket me-2"></i> 退出
+                                                </button>
+                                            </form>
+                                        </li>
+                            </ul>
+                        </li>
+                        <% } else { %>
+                            <li class="nav-item"><a class="btn btn-outline-primary btn-sm px-4 rounded-pill"
+                                    href="/login">登录</a></li>
+                            <li class="nav-item ms-2"><a class="btn btn-primary btn-sm px-4 rounded-pill"
+                                    href="/register">注册</a></li>
+                            <% } %>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    <div class="main-content">

@@ -1,0 +1,104 @@
+<%- include('partials/header') %>
+
+<div class="container mt-5 animate__animated animate__fadeIn">
+    <div class="row">
+        <div class="col-md-10 offset-md-1">
+            <!-- 标签信息 -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h2 class="mb-3">
+                        <span class="badge rounded-pill px-4 py-3"
+                              style="background-color: <%= tag.color %>; font-size: 1.5rem;">
+                            # <%= tag.name %>
+                        </span>
+                    </h2>
+                    <% if (tag.description) { %>
+                        <p class="text-muted"><%= tag.description %></p>
+                    <% } %>
+                    <div class="text-muted small">
+                        <i class="fa-solid fa-file-lines me-2"></i>
+                        共有 <strong><%= tag.count %></strong> 篇文章使用了这个标签
+                        <% if (tag.isHot) { %>
+                            <span class="badge bg-danger ms-2">热门</span>
+                        <% } %>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 文章列表 -->
+            <h4 class="mb-3">相关文章</h4>
+            <% if (blogs && blogs.length > 0) { %>
+                <% blogs.forEach(blog => { %>
+                    <article class="card shadow-sm mb-3 hover-card">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <h5 class="card-title">
+                                        <a href="/blog/<%= blog._id %>" class="text-decoration-none text-dark fw-bold">
+                                            <%= blog.title %>
+                                        </a>
+                                    </h5>
+
+                                    <!-- 摘要 -->
+                                    <% if (blog.summary) { %>
+                                        <p class="text-muted mb-2"><%= blog.summary.substring(0, 150) %>...</p>
+                                    <% } %>
+
+                                    <!-- 其他标签 -->
+                                    <% if (blog.tags && blog.tags.length > 0) { %>
+                                        <div class="mb-2">
+                                            <% blog.tags.forEach(t => { %>
+                                                <a href="/tag/<%= t._id %>" class="badge rounded-pill me-1"
+                                                   style="background-color: <%= t.color || '#007bff' %>; text-decoration: none;">
+                                                    # <%= t.name %>
+                                                </a>
+                                            <% }) %>
+                                        </div>
+                                    <% } %>
+
+                                    <!-- 元信息 -->
+                                    <div class="d-flex align-items-center text-muted small">
+                                        <img src="<%= blog.author.avatar %>" class="rounded-circle me-2" width="24" height="24" alt="<%= blog.author.username %>">
+                                        <span class="me-3"><%= blog.author.username %></span>
+                                        <i class="fa-solid fa-eye me-1"></i>
+                                        <span class="me-3"><%= blog.views %></span>
+                                        <i class="fa-solid fa-heart me-1"></i>
+                                        <span class="me-3"><%= blog.likes ? blog.likes.length : 0 %></span>
+                                        <i class="fa-solid fa-clock me-1"></i>
+                                        <span><%= new Date(blog.createdAt).toLocaleDateString() %></span>
+                                    </div>
+                                </div>
+
+                                <% if (blog.image) { %>
+                                    <img src="<%= blog.image %>" class="ms-3 rounded" width="120" height="80" style="object-fit: cover;" alt="<%= blog.title %>">
+                                <% } %>
+                            </div>
+                        </div>
+                    </article>
+                <% }) %>
+
+                <!-- 分页 -->
+                <% if (totalPages > 1) { %>
+                    <nav aria-label="文章分页">
+                        <ul class="pagination justify-content-center">
+                            <% for (let i = 1; i <= totalPages; i++) { %>
+                                <li class="page-item <%= i === currentPage ? 'active' : '' %>">
+                                    <a class="page-link" href="/tag/<%= tag._id %>?page=<%= i %>">
+                                        <%= i %>
+                                    </a>
+                                </li>
+                            <% } %>
+                        </ul>
+                    </nav>
+                <% } %>
+            <% } else { %>
+                <div class="alert alert-info text-center">
+                    <i class="fa-solid fa-circle-info me-2"></i>
+                    该标签下暂无文章
+                </div>
+            <% } %>
+        </div>
+    </div>
+</div>
+
+<%- include('partials/footer') %>

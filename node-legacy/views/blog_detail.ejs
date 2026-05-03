@@ -1,0 +1,424 @@
+<%- include('partials/header') %>
+
+    <!-- Highlight.js for code syntax highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script>hljs.highlightAll();</script>
+
+    <!-- 分享功能样式和脚本 -->
+    <link rel="stylesheet" href="/css/share.css">
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <script src="/js/share.js"></script>
+
+    <!-- 结构化数据 (JSON-LD for SEO) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BlogPosting",
+      "headline": "<%= blog.title %>",
+      "image": "<%= blog.image ? (blog.image.startsWith('http') ? blog.image : (typeof metaUrl !== 'undefined' ? metaUrl.split('/blog')[0] : 'http://localhost:3000') + blog.image) : '' %>",
+      "author": {
+        "@type": "Person",
+        "name": "<%= blog.author ? blog.author.username : '匿名' %>"
+      },
+      "datePublished": "<%= blog.createdAt ? blog.createdAt.toISOString() : '' %>",
+      "dateModified": "<%= blog.updatedAt ? blog.updatedAt.toISOString() : blog.createdAt.toISOString() %>",
+      "description": "<%= blog.content.replace(/<[^>]*>/g, '').substring(0, 160) %>",
+      "articleBody": "<%= blog.content.replace(/<[^>]*>/g, '').substring(0, 500) %>",
+      "keywords": "<%= blog.tags && blog.tags.length > 0 ? (typeof blog.tags[0] === 'object' ? blog.tags.map(t => t.name).join(', ') : blog.tags.join(', ')) : '' %>",
+      "interactionStatistic": [
+        {
+          "@type": "InteractionCounter",
+          "interactionType": "https://schema.org/LikeAction",
+          "userInteractionCount": <%= blog.likes ? blog.likes.length : 0 %>
+        },
+        {
+          "@type": "InteractionCounter",
+          "interactionType": "https://schema.org/ViewAction",
+          "userInteractionCount": <%= blog.views %>
+        },
+        {
+          "@type": "InteractionCounter",
+          "interactionType": "https://schema.org/CommentAction",
+          "userInteractionCount": <%= comments.length %>
+        }
+      ]
+    }
+    </script>
+
+    <div class="row animate__animated animate__fadeIn">
+        <div class="col-md-8 offset-md-2">
+            <!-- Blog Content -->
+            <article class="blog-detail-card p-5 rounded-4 mb-5 fade-in">
+                <!-- 标题区域 -->
+                <header class="article-header mb-5">
+                    <h1 class="mb-4 display-5 fw-bold text-dark lh-base">
+                        <%= blog.title %>
+                    </h1>
+
+                    <% if (user && blog.author && blog.author._id.toString()===user._id.toString()) { %>
+                        <div class="mb-4 d-flex gap-2">
+                            <a href="/blog/edit/<%= blog._id %>" class="btn btn-outline-primary rounded-pill">
+                                <i class="fa-solid fa-pen-to-square me-1"></i> 编辑文章
+                            </a>
+                            <form action="/blog/delete/<%= blog._id %>" method="POST" class="d-inline"
+                                onsubmit="return confirm('确定要删除这篇文章吗？此操作不可逆！');">
+                                <button type="submit" class="btn btn-outline-danger rounded-pill">
+                                    <i class="fa-solid fa-trash me-1"></i> 删除文章
+                                </button>
+                            </form>
+                        </div>
+                        <% } %>
+
+                            <% if (blog.tags && blog.tags.length> 0) { %>
+                                <div class="mb-4 d-flex gap-2 flex-wrap">
+                                    <% blog.tags.forEach(tag=> { %>
+                                        <span class="badge bg-gradient-primary text-white px-3 py-2">
+                                            <i class="fa-solid fa-hashtag"></i>
+                                            <%= typeof tag==='object' ? tag.name : tag %>
+                                        </span>
+                                        <% }) %>
+                                </div>
+                                <% } %>
+
+                                    <!-- 作者信息栏 -->
+                                    <div class="author-meta-bar glass-effect p-4 rounded-3 mb-5">
+                                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+                                            <div class="d-flex align-items-center">
+                                                <% if (blog.author) { %>
+                                                    <img src="<%= blog.author.avatar || 'https://ui-avatars.com/api/?name=' + blog.author.username + '&background=random' %>"
+                                                        class="rounded-circle me-3 border border-3 border-white shadow"
+                                                        width="60" height="60">
+                                                    <div>
+                                                        <div class="fw-bold text-dark fs-5">
+                                                            <%= blog.author.username %>
+                                                        </div>
+                                                        <small class="text-muted">
+                                                            <i class="fa-regular fa-calendar me-1"></i>
+                                                            <%= blog.createdAt ? blog.createdAt.toLocaleDateString()
+                                                                : '未知日期' %>
+                                                                <i class="fa-regular fa-eye ms-3 me-1"></i>
+                                                                <%= blog.views %> 阅读
+                                                        </small>
+                                                    </div>
+                                                    <% } else { %>
+                                                        <img src="https://ui-avatars.com/api/?name=System&background=E0E0E0"
+                                                            class="rounded-circle me-3" width="60" height="60">
+                                                        <div>
+                                                            <div class="fw-bold text-dark">系统预置</div>
+                                                            <small class="text-muted">原作者已注销</small>
+                                                        </div>
+                                                        <% } %>
+                                            </div>
+
+                                            <!-- 关注按钮 -->
+                                            <% if (user && blog.author && blog.author._id.toString()
+                                                !==user._id.toString()) { %>
+                                                <button id="followBtn" class="btn btn-primary rounded-pill px-4"
+                                                    data-user-id="<%= blog.author._id %>">
+                                                    <i class="fa-solid fa-user-plus me-1" id="followIcon"></i>
+                                                    <span id="followText">关注作者</span>
+                                                </button>
+                                                <% } %>
+                                        </div>
+                                    </div>
+                </header>
+
+                <% if (blog.image) { %>
+                    <div class="mb-5">
+                        <img src="<%= blog.image %>" class="img-fluid rounded-3 shadow-sm" alt="<%= blog.title %>"
+                            loading="lazy" style="max-height: 400px; width: 100%; object-fit: cover;">
+                    </div>
+                    <% } %>
+
+                        <div class="blog-content fs-5 lh-lg mb-5 text-break">
+                            <%- blog.content %>
+                        </div>
+
+                        <!-- 分享按钮 -->
+                        <div class="mb-4 pb-4 border-bottom">
+                            <h6 class="text-muted mb-3"><i class="fa-solid fa-share-nodes me-2"></i>分享文章</h6>
+                            <div class="share-buttons">
+                                <button class="share-btn share-btn-wechat"
+                                    onclick="showWechatQRCode('<%= typeof metaUrl !== 'undefined' ? metaUrl : 'http://localhost:3000/blog/' + blog._id %>')">
+                                    <i class="fa-brands fa-weixin"></i>
+                                    <span>微信</span>
+                                </button>
+                                <button class="share-btn share-btn-weibo"
+                                    onclick="shareToWeibo('<%= blog.title %>', '<%= typeof metaUrl !== 'undefined' ? metaUrl : 'http://localhost:3000/blog/' + blog._id %>')">
+                                    <i class="fa-brands fa-weibo"></i>
+                                    <span>微博</span>
+                                </button>
+                                <button class="share-btn share-btn-qq"
+                                    onclick="shareToQQ('<%= blog.title %>', '<%= typeof metaUrl !== 'undefined' ? metaUrl : 'http://localhost:3000/blog/' + blog._id %>', '<%= blog.content.replace(/<[^>]*>/g, '').substring(0, 100) %>')">
+                                    <i class="fa-brands fa-qq"></i>
+                                    <span>QQ空间</span>
+                                </button>
+                                <button class="share-btn share-btn-twitter"
+                                    onclick="shareToTwitter('<%= blog.title %>', '<%= typeof metaUrl !== 'undefined' ? metaUrl : 'http://localhost:3000/blog/' + blog._id %>')">
+                                    <i class="fa-brands fa-twitter"></i>
+                                    <span>Twitter</span>
+                                </button>
+                                <button class="share-btn share-btn-copy"
+                                    onclick="copyLink('<%= typeof metaUrl !== 'undefined' ? metaUrl : 'http://localhost:3000/blog/' + blog._id %>')">
+                                    <i class="fa-solid fa-link"></i>
+                                    <span>复制链接</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Actions: Like & Bookmark -->
+                        <div class="action-buttons text-center my-5 py-4 border-top border-bottom">
+                            <div class="d-flex justify-content-center gap-3 flex-wrap">
+                                <button id="likeBtn"
+                                    class="btn btn-lg btn-outline-danger rounded-pill px-5 shadow-sm hover-scale"
+                                    data-id="<%= blog._id %>">
+                                    <i class="fa-regular fa-heart fs-5 me-2" id="likeIcon"></i>
+                                    <span id="likeText" class="fw-bold">点赞</span>
+                                    <span class="badge bg-danger rounded-pill ms-2" id="likeCount">
+                                        <%= blog.likes ? blog.likes.length : 0 %>
+                                    </span>
+                                </button>
+
+                                <button id="bookmarkBtn"
+                                    class="btn btn-lg btn-outline-warning rounded-pill px-5 shadow-sm hover-scale"
+                                    data-id="<%= blog._id %>">
+                                    <i class="fa-regular fa-star fs-5 me-2" id="bookmarkIcon"></i>
+                                    <span id="bookmarkText" class="fw-bold">收藏</span>
+                                </button>
+
+                                <button class="btn btn-lg btn-outline-primary rounded-pill px-5 shadow-sm hover-scale"
+                                    onclick="window.scrollTo({top: document.getElementById('comments').offsetTop, behavior: 'smooth'})">
+                                    <i class="fa-regular fa-comments fs-5 me-2"></i>
+                                    <span class="fw-bold">评论</span>
+                                    <span class="badge bg-primary rounded-pill ms-2">
+                                        <%= comments.length %>
+                                    </span>
+                                </button>
+                            </div>
+                        </div>
+            </article>
+
+            <!-- Comments Section -->
+            <div class="bg-white p-4 p-md-5 rounded-3 shadow-sm mb-5">
+                <h3 class="mb-4 fw-bold"><i class="fa-regular fa-comments me-2 text-primary"></i> 评论区 (<%=
+                        comments.length %>)</h3>
+
+                <!-- Add Comment Form -->
+                <div class="card bg-light border-0 mb-5">
+                    <div class="card-body p-4">
+                        <% if (user) { %>
+                            <div class="d-flex mb-3">
+                                <img src="<%= user.avatar || 'https://ui-avatars.com/api/?name=' + user.username + '&background=random' %>"
+                                    class="rounded-circle me-3" width="40" height="40">
+                                <h5 class="card-title pt-2">发表你的看法</h5>
+                            </div>
+                            <form action="/blog/<%= blog._id %>/comment" method="POST">
+                                <div class="mb-3">
+                                    <textarea class="form-control border-0 shadow-sm" name="content" rows="4" required
+                                        placeholder="写下你的想法... (文明发言，共建和谐社区)"></textarea>
+                                </div>
+                                <div class="text-end">
+                                    <button type="submit" class="btn btn-primary rounded-pill px-4"><i
+                                            class="fa-solid fa-paper-plane me-2"></i> 提交评论</button>
+                                </div>
+                            </form>
+                            <% } else { %>
+                                <div class="text-center py-4">
+                                    <i class="fa-solid fa-lock fa-3x text-muted mb-3"></i>
+                                    <p class="mb-3 text-muted">登录后参与讨论</p>
+                                    <a href="/login" class="btn btn-primary rounded-pill px-4">立即登录</a>
+                                </div>
+                                <% } %>
+                    </div>
+                </div>
+
+                <!-- Comment List -->
+                <div class="comments-list">
+                    <% if (comments.length> 0) { %>
+                        <% comments.forEach(comment=> { %>
+                            <div class="comment-item d-flex mb-4 animate__animated animate__fadeInUp">
+                                <div class="flex-shrink-0">
+                                    <% if (comment.author) { %>
+                                        <img src="<%= comment.author.avatar || 'https://ui-avatars.com/api/?name=' + comment.author.username + '&background=random' %>"
+                                            class="rounded-circle" width="50" height="50">
+                                        <% } else { %>
+                                            <img src="https://ui-avatars.com/api/?name=Anon&background=E0E0E0"
+                                                class="rounded-circle" width="50" height="50">
+                                            <% } %>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <div class="bg-light p-3 rounded-3 shadow-sm">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <h6 class="fw-bold mb-0 text-dark">
+                                                <%= comment.author ? comment.author.username : '匿名用户' %>
+                                            </h6>
+                                            <small class="text-muted">
+                                                <%= comment.createdAt ? comment.createdAt.toLocaleDateString() : '未知' %>
+                                            </small>
+                                        </div>
+                                        <p class="mb-0 text-secondary">
+                                            <%= comment.content %>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            <% }) %>
+                                <% } else { %>
+                                    <div class="text-center py-5 text-muted">
+                                        <i class="fa-regular fa-comment-dots fa-3x mb-3 text-light"></i>
+                                        <p class="mb-0">暂无评论，快来抢占沙发吧！</p>
+                                    </div>
+                                    <% } %>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function () {
+            // User ID
+            const userId = '<%= (typeof user !== "undefined" && user) ? user._id : "" %>';
+
+            // Build likes array manually to avoid EJS tag issues
+            const likes = [
+                <% if (blog.likes && blog.likes.length > 0) { %>
+                    <% blog.likes.forEach(function (l, i) { %>
+                "<%= l %>" <%= i < blog.likes.length - 1 ? ',' : '' %>
+                    <% }) %>
+                <% } %>
+            ];
+
+            if (userId && likes.includes(userId)) {
+                $('#likeBtn').removeClass('btn-outline-danger').addClass('btn-danger');
+                $('#likeIcon').removeClass('fa-regular').addClass('fa-solid');
+                $('#likeText').text('已赞');
+            }
+
+            $('#likeBtn').click(function () {
+                if (!userId) {
+                    window.location.href = '/login';
+                    return;
+                }
+                const btn = $(this);
+                const blogId = btn.data('id');
+                $.post('/blog/' + blogId + '/like', function (data) {
+                    if (data.liked) {
+                        btn.removeClass('btn-outline-danger').addClass('btn-danger');
+                        $('#likeIcon').removeClass('fa-regular').addClass('fa-solid');
+                        $('#likeText').text('已赞');
+                        btn.addClass('animate__animated animate__heartBeat');
+                    } else {
+                        btn.removeClass('btn-danger').addClass('btn-outline-danger');
+                        $('#likeIcon').removeClass('fa-solid').addClass('fa-regular');
+                        $('#likeText').text('点赞');
+                        btn.removeClass('animate__animated animate__heartBeat');
+                    }
+                    const likeCount = typeof data.likesCount !== 'undefined' ? data.likesCount : data.count;
+                    $('#likeCount').text(likeCount);
+                }).fail(function () {
+                    alert('操作失败，请重试');
+                });
+            });
+
+            // Build bookmarks array manually
+            const userBookmarks = [
+                <% if (typeof user !== "undefined" && user && user.bookmarks && user.bookmarks.length > 0) { %>
+                    <% user.bookmarks.forEach(function (b, i) { %>
+                "<%= b %>" <%= i < user.bookmarks.length - 1 ? ',' : '' %>
+                    <% }) %>
+                <% } %>
+            ];
+
+            if (userId && userBookmarks.includes('<%= blog._id %>')) {
+                $('#bookmarkBtn').removeClass('btn-outline-warning').addClass('btn-warning text-white');
+                $('#bookmarkIcon').removeClass('fa-regular').addClass('fa-solid');
+                $('#bookmarkText').text('已收藏');
+            }
+
+            $('#bookmarkBtn').click(function () {
+                if (!userId) {
+                    window.location.href = '/login';
+                    return;
+                }
+                const btn = $(this);
+                const blogId = btn.data('id');
+                $.post('/blog/' + blogId + '/bookmark', function (data) {
+                    if (data.bookmarked) {
+                        btn.removeClass('btn-outline-warning').addClass('btn-warning text-white');
+                        $('#bookmarkIcon').removeClass('fa-regular').addClass('fa-solid');
+                        $('#bookmarkText').text('已收藏');
+                        btn.addClass('animate__animated animate__rubberBand');
+                    } else {
+                        btn.removeClass('btn-warning text-white').addClass('btn-outline-warning');
+                        $('#bookmarkIcon').removeClass('fa-solid').addClass('fa-regular');
+                        $('#bookmarkText').text('收藏');
+                        btn.removeClass('animate__animated animate__rubberBand');
+                    }
+                }).fail(function () {
+                    alert('操作失败，请重试');
+                });
+            });
+
+            // 关注按钮功能
+            $('#followBtn').click(function () {
+                if (!userId) {
+                    window.location.href = '/login';
+                    return;
+                }
+                const btn = $(this);
+                const targetUserId = btn.data('user-id');
+                const isFollowing = btn.hasClass('btn-primary');
+                const url = '/user/' + targetUserId + '/' + (isFollowing ? 'unfollow' : 'follow');
+
+                $.post(url, function (data) {
+                    if (data.success) {
+                        if (data.following) {
+                            btn.removeClass('btn-outline-primary').addClass('btn-primary');
+                            $('#followIcon').removeClass('fa-user-plus').addClass('fa-user-check');
+                            $('#followText').text('已关注');
+                            btn.addClass('animate__animated animate__tada');
+                            setTimeout(() => btn.removeClass('animate__animated animate__tada'), 1000);
+                        } else {
+                            btn.removeClass('btn-primary').addClass('btn-outline-primary');
+                            $('#followIcon').removeClass('fa-user-check').addClass('fa-user-plus');
+                            $('#followText').text('关注');
+                        }
+                    }
+                }).fail(function (xhr) {
+                    const error = xhr.responseJSON && xhr.responseJSON.error ? xhr.responseJSON.error : '操作失败';
+                    alert(error);
+                });
+            });
+
+            // 检查是否已关注
+            <% if (user && blog.author && user.following && user.following.length > 0) { %>
+                const following = [
+                    <% user.following.forEach(function (f, i) { %>
+                "<%= f %>" <%= i < user.following.length - 1 ? ',' : '' %>
+                    <% }) %>
+                ];
+                const authorId = '<%= blog.author._id %>';
+                if (following.includes(authorId)) {
+                    $('#followBtn').removeClass('btn-outline-primary').addClass('btn-primary');
+                    $('#followIcon').removeClass('fa-user-plus').addClass('fa-user-check');
+                    $('#followText').text('已关注');
+                }
+            <% } %>
+        });
+    </script>
+
+    <!-- 微信二维码弹窗 -->
+    <div id="wechatQRModal" class="wechat-qrcode-modal">
+        <div class="wechat-qrcode-content">
+            <button class="wechat-qrcode-close" onclick="closeWechatQRModal()">&times;</button>
+            <h4><i class="fa-brands fa-weixin me-2"></i>微信扫码分享</h4>
+            <p class="text-muted small">使用微信扫一扫分享给好友</p>
+            <canvas id="wechatQRCanvas"></canvas>
+        </div>
+    </div>
+
+    <!-- 分享提示框 -->
+    <div id="shareTooltip" class="share-tooltip"></div>
+
+    <%- include('partials/footer') %>

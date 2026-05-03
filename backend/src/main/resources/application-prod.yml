@@ -1,0 +1,47 @@
+# Production Environment Configuration
+# 生产环境必须通过环境变量注入所有敏感配置
+
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+      password: ${REDIS_PASSWORD}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+
+# JWT - 生产环境必须通过环境变量注入密钥
+jwt:
+  secret: ${JWT_SECRET}
+
+# Logging - 生产环境关闭敏感日志
+logging:
+  level:
+    root: WARN
+    com.blog: INFO
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql.BasicBinder: OFF
+
+# Server
+server:
+  port: ${PORT:8080}
+
+# 生产环境禁用 Swagger
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+# 生产环境禁用管理员自动初始化
+app:
+  admin:
+    enabled: false

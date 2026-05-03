@@ -1,0 +1,55 @@
+<%- include('partials/header') %>
+
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-4">
+            <div class="card shadow-sm mt-5">
+                <div class="card-body p-4">
+                    <h3 class="card-title text-center mb-4">新用户注册</h3>
+
+                    <% if (typeof error !=='undefined' && error) { %>
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <i class="fa-solid fa-circle-exclamation me-2"></i>
+                            <%= error %>
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"
+                                    aria-label="Close"></button>
+                        </div>
+                        <% } %>
+
+                            <form action="/register" method="POST">
+                                <div class="mb-3">
+                                    <label for="username" class="form-label">用户名</label>
+                                    <input type="text" class="form-control" id="username" name="username" required
+                                        placeholder="设置您的用户名"
+                                        value="<%= typeof username !== 'undefined' ? username : '' %>"
+                                        oninvalid="this.setCustomValidity('请填写用户名')"
+                                        oninput="this.setCustomValidity('')">
+                                    <div class="form-text">3-20个字符，只能包含字母、数字、下划线和中文</div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="password" class="form-label">密码</label>
+                                    <input type="password" class="form-control" id="password" name="password" required
+                                        placeholder="设置您的密码" oninvalid="this.setCustomValidity('请填写密码')"
+                                        oninput="this.setCustomValidity('')">
+                                    <div class="form-text">至少6个字符</div>
+                                </div>
+                                <% if (typeof allowAdminCode !== 'undefined' && allowAdminCode) { %>
+                                    <div class="mb-3">
+                                        <label for="adminCode" class="form-label">Admin Invite Code</label>
+                                        <input type="password" class="form-control" id="adminCode" name="adminCode"
+                                            placeholder="Optional">
+                                    </div>
+                                    <% } %>
+                                <div class="d-grid gap-2">
+                                    <button type="submit" class="btn btn-success">立即注册</button>
+                                </div>
+                            </form>
+                            <div class="text-center mt-3">
+                                <p class="mb-0 text-muted">已有账号？ <a href="/login" class="text-decoration-none">去登录</a>
+                                </p>
+                            </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <%- include('partials/footer') %>

@@ -1,0 +1,157 @@
+<%- include('partials/header') %>
+
+<div class="container mt-5 animate__animated animate__fadeIn">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="fw-bold">
+                    <i class="fa-solid fa-bell me-2 text-primary"></i>通知中心
+                </h2>
+                <% if (unreadCount > 0) { %>
+                    <button class="btn btn-outline-primary btn-sm" id="mark-all-read">
+                        <i class="fa-solid fa-check-double me-1"></i>
+                        全部标为已读
+                    </button>
+                <% } %>
+            </div>
+
+            <!-- 未读通知数量 -->
+            <% if (unreadCount > 0) { %>
+                <div class="alert alert-info d-flex align-items-center">
+                    <i class="fa-solid fa-circle-info me-2"></i>
+                    您有 <strong class="mx-1"><%= unreadCount %></strong> 条未读通知
+                </div>
+            <% } %>
+
+            <!-- 通知列表 -->
+            <% if (notifications && notifications.length > 0) { %>
+                <div class="list-group">
+                    <% notifications.forEach(notification => { %>
+                        <div class="list-group-item <%= notification.isRead ? '' : 'list-group-item-light' %> notification-item"
+                             data-id="<%= notification._id %>">
+                            <div class="d-flex align-items-start">
+                                <!-- 发送者头像 -->
+                                <img src="<%= notification.sender.avatar %>"
+                                     class="rounded-circle me-3"
+                                     width="48"
+                                     height="48"
+                                     alt="<%= notification.sender.username %>">
+
+                                <div class="flex-grow-1">
+                                    <!-- 通知内容 -->
+                                    <div class="d-flex justify-content-between align-items-start mb-1">
+                                        <div>
+                                            <strong><%= notification.sender.username %></strong>
+                                            <%= notification.content %>
+                                        </div>
+                                        <% if (!notification.isRead) { %>
+                                            <span class="badge bg-primary">新</span>
+                                        <% } %>
+                                    </div>
+
+                                    <!-- 相关文章链接 -->
+                                    <% if (notification.relatedBlog) { %>
+                                        <a href="/blog/<%= notification.relatedBlog._id %>" class="text-muted small text-decoration-none">
+                                            <i class="fa-solid fa-file-lines me-1"></i>
+                                            <%= notification.relatedBlog.title %>
+                                        </a>
+                                    <% } %>
+
+                                    <!-- 时间 -->
+                                    <div class="text-muted small mt-2">
+                                        <i class="fa-solid fa-clock me-1"></i>
+                                        <%= new Date(notification.createdAt).toLocaleString() %>
+                                    </div>
+                                </div>
+
+                                <!-- 操作按钮 -->
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-link text-muted" data-bs-toggle="dropdown">
+                                        <i class="fa-solid fa-ellipsis-vertical"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        <% if (!notification.isRead) { %>
+                                            <li>
+                                                <button class="dropdown-item mark-read" data-id="<%= notification._id %>">
+                                                    <i class="fa-solid fa-check me-2"></i>标为已读
+                                                </button>
+                                            </li>
+                                        <% } %>
+                                        <li>
+                                            <button class="dropdown-item text-danger delete-notification" data-id="<%= notification._id %>">
+                                                <i class="fa-solid fa-trash me-2"></i>删除
+                                            </button>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    <% }) %>
+                </div>
+
+                <!-- 分页 -->
+                <% if (totalPages > 1) { %>
+                    <nav aria-label="通知分页" class="mt-4">
+                        <ul class="pagination justify-content-center">
+                            <% for (let i = 1; i <= totalPages; i++) { %>
+                                <li class="page-item <%= i === currentPage ? 'active' : '' %>">
+                                    <a class="page-link" href="/notifications?page=<%= i %>">
+                                        <%= i %>
+                                    </a>
+                                </li>
+                            <% } %>
+                        </ul>
+                    </nav>
+                <% } %>
+            <% } else { %>
+                <div class="text-center text-muted py-5">
+                    <i class="fa-solid fa-bell-slash fa-3x mb-3"></i>
+                    <p class="fs-5">暂无通知</p>
+                </div>
+            <% } %>
+        </div>
+    </div>
+</div>
+
+<script>
+// 标记单个通知为已读
+$('.mark-read').on('click', function() {
+    const notificationId = $(this).data('id');
+    $.ajax({
+        url: `/api/notifications/${notificationId}/read`,
+        method: 'POST',
+        success: function() {
+            location.reload();
+        }
+    });
+});
+
+// 标记所有通知为已读
+$('#mark-all-read').on('click', function() {
+    $.ajax({
+        url: '/api/notifications/read-all',
+        method: 'POST',
+        success: function() {
+            location.reload();
+        }
+    });
+});
+
+// 删除通知
+$('.delete-notification').on('click', function() {
+    const notificationId = $(this).data('id');
+    if (confirm('确定要删除这条通知吗？')) {
+        $.ajax({
+            url: `/api/notifications/${notificationId}`,
+            method: 'DELETE',
+            success: function() {
+                $(`.notification-item[data-id="${notificationId}"]`).fadeOut(300, function() {
+                    $(this).remove();
+                });
+            }
+        });
+    }
+});
+</script>
+
+<%- include('partials/footer') %>

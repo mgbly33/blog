@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>后台管理系统 | 仪表盘</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Animate.css -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/css/style.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+</head>
+
+<body class="bg-light">
+
+    <div class="admin-wrapper">
+        <!-- Sidebar -->
+        <%- include('partials/sidebar') %>
+
+            <!-- Content -->
+            <div class="admin-content">
+                <div class="container-fluid animate__animated animate__fadeIn">
+                    <h2 class="mb-4 text-dark fw-bold">仪表盘概览</h2>
+
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="card stat-card bg-primary text-white p-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-0 text-white-50">总用户</h6>
+                                        <h2 class="mb-0 fw-bold">
+                                            <%= totalUsers %>
+                                        </h2>
+                                    </div>
+                                    <div class="stat-icon bg-white text-primary">
+                                        <i class="fa-solid fa-users"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Mock Data for other stats -->
+                        <div class="col-md-3">
+                            <div class="card stat-card bg-success text-white p-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-0 text-white-50">总文章</h6>
+                                        <h2 class="mb-0 fw-bold">
+                                            <%= totalBlogs %>
+                                        </h2>
+                                    </div>
+                                    <div class="stat-icon bg-white text-success">
+                                        <i class="fa-solid fa-file-alt"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card stat-card bg-warning text-white p-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-0 text-white-50">总评论</h6>
+                                        <h2 class="mb-0 fw-bold">
+                                            <%= totalComments %>
+                                        </h2>
+                                    </div>
+                                    <div class="stat-icon bg-white text-warning">
+                                        <i class="fa-solid fa-comments"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card stat-card bg-info text-white p-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-0 text-white-50">今日访问</h6>
+                                        <h2 class="mb-0 fw-bold">532</h2>
+                                    </div>
+                                    <div class="stat-icon bg-white text-info">
+                                        <i class="fa-solid fa-chart-line"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-lg-8">
+                            <div class="card shadow-sm border-0 h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title text-muted mb-4">流量趋势</h5>
+                                    <canvas id="activityChart" height="120"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-4">
+                            <div class="card shadow-sm border-0 h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title text-muted mb-4">用户构成</h5>
+                                    <canvas id="userChart" height="200"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card shadow-sm border-0">
+                        <div class="card-header bg-white border-0 py-3">
+                            <h5 class="mb-0 fw-bold text-secondary"><i class="fa-solid fa-users me-2"></i> 最新注册用户</h5>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th class="ps-4">用户</th>
+                                        <th>角色</th>
+                                        <th>注册时间</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% users.forEach(u=> { %>
+                                        <tr>
+                                            <td class="ps-4">
+                                                <div class="d-flex align-items-center">
+                                                    <img src="<%= u.avatar || 'https://ui-avatars.com/api/?name=' + u.username + '&background=random' %>"
+                                                        class="rounded-circle me-3" width="36" height="36">
+                                                    <span class="fw-bold text-dark">
+                                                        <%= u.username %>
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <% if (u.isAdmin) { %>
+                                                    <span
+                                                        class="badge bg-danger-subtle text-danger rounded-pill px-3">管理员</span>
+                                                    <% } else { %>
+                                                        <span
+                                                            class="badge bg-primary-subtle text-primary rounded-pill px-3">用户</span>
+                                                        <% } %>
+                                            </td>
+                                            <td class="text-secondary">
+                                                <%= u.createdAt.toLocaleDateString() %>
+                                            </td>
+                                            <td>
+                                                <% if (u.username !=='admin' ) { %>
+                                                    <form action="/admin/user/toggle-ban/<%= u._id %>" method="POST"
+                                                        class="d-inline">
+                                                        <% if (u.isBanned) { %>
+                                                            <button type="submit"
+                                                                class="btn btn-outline-success btn-sm rounded-pill"
+                                                                title="解封"><i class="fa-solid fa-unlock"></i></button>
+                                                            <% } else { %>
+                                                                <button type="submit"
+                                                                    class="btn btn-outline-warning btn-sm rounded-pill"
+                                                                    title="封禁" onclick="return confirm('确定要封禁该用户吗？')"><i
+                                                                        class="fa-solid fa-ban"></i></button>
+                                                                <% } %>
+                                                    </form>
+                                                    <form action="/admin/user/reset-password/<%= u._id %>" method="POST"
+                                                        class="d-inline">
+                                                        <button type="submit"
+                                                            class="btn btn-outline-info btn-sm rounded-pill"
+                                                            title="重置密码 (123456)"
+                                                            onclick="return confirm('确定重置该用户密码为 123456 吗？')"><i
+                                                                class="fa-solid fa-key"></i></button>
+                                                    </form>
+                                                    <form action="/admin/user/delete/<%= u._id %>" method="POST"
+                                                        class="d-inline">
+                                                        <button type="submit"
+                                                            class="btn btn-outline-danger btn-sm rounded-pill"
+                                                            title="删除" onclick="return confirm('确定删除？')"><i
+                                                                class="fa-solid fa-trash"></i></button>
+                                                    </form>
+                                                    <% } else { %>
+                                                        <small class="text-muted"><i
+                                                                class="fa-solid fa-lock"></i></small>
+                                                        <% } %>
+                                            </td>
+                                        </tr>
+                                        <% }) %>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="card-footer bg-white border-0 py-3">
+                            <!-- Pagination -->
+                            <% if (pages> 0) { %>
+                                <nav aria-label="Page navigation">
+                                    <ul class="pagination justify-content-center mb-0">
+                                        <% if (current==1) { %>
+                                            <li class="page-item disabled"><a
+                                                    class="page-link rounded-circle mx-1 border-0 bg-light"><i
+                                                        class="fa-solid fa-chevron-left"></i></a></li>
+                                            <% } else { %>
+                                                <li class="page-item"><a
+                                                        class="page-link rounded-circle mx-1 border-0 bg-light"
+                                                        href="/admin?page=1"><i
+                                                            class="fa-solid fa-chevron-left"></i></a></li>
+                                                <% } %>
+
+                                                    <% var i=(Number(current)> 5 ? Number(current) - 4 : 1) %>
+                                                        <% for (; i <=(Number(current) + 4) && i <=pages; i++) { %>
+                                                            <% if (i==current) { %>
+                                                                <li class="page-item active"><a
+                                                                        class="page-link rounded-circle mx-1 border-0">
+                                                                        <%= i %>
+                                                                    </a></li>
+                                                                <% } else { %>
+                                                                    <li class="page-item"><a
+                                                                            class="page-link rounded-circle mx-1 border-0 bg-light"
+                                                                            href="/admin?page=<%= i %>">
+                                                                            <%= i %>
+                                                                        </a></li>
+                                                                    <% } %>
+                                                                        <% } %>
+
+                                                                            <% if (current==pages) { %>
+                                                                                <li class="page-item disabled"><a
+                                                                                        class="page-link rounded-circle mx-1 border-0 bg-light"><i
+                                                                                            class="fa-solid fa-chevron-right"></i></a>
+                                                                                </li>
+                                                                                <% } else { %>
+                                                                                    <li class="page-item"><a
+                                                                                            class="page-link rounded-circle mx-1 border-0 bg-light"
+                                                                                            href="/admin?page=<%= pages %>"><i
+                                                                                                class="fa-solid fa-chevron-right"></i></a>
+                                                                                    </li>
+                                                                                    <% } %>
+                                    </ul>
+                                </nav>
+                                <% } %>
+                        </div>
+                    </div>
+                </div>
+            </div>
+    </div>
+
+    <script>
+        // Activity Chart
+        const ctx = document.getElementById('activityChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'],
+                datasets: [{
+                    label: '访问量',
+                    data: [65, 59, 80, 81, 56, 55, 120],
+                    borderColor: '#6c5ce7',
+                    backgroundColor: 'rgba(108, 92, 231, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true, grid: { display: false } }, x: { grid: { display: false } } }
+            }
+        });
+
+        // User Chart
+        const ctx2 = document.getElementById('userChart').getContext('2d');
+        new Chart(ctx2, {
+            type: 'doughnut',
+            data: {
+                labels: ['管理员', '普通用户', '访客'],
+                datasets: [{
+                    data: [1, <%= users.length %>, 20],
+                    backgroundColor: ['#ff7675', '#0984e3', '#dfe6e9'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+    </script>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>

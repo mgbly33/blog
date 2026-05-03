@@ -1,0 +1,336 @@
+<%- include('partials/header') %>
+
+<!-- EasyMDE Markdown Editor -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.css">
+<script src="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<!-- 自动保存组件 -->
+<script src="/js/autosave.js"></script>
+<script src="/js/versionHistory.js"></script>
+
+<div class="row animate__animated animate__fadeIn">
+    <div class="col-md-10 offset-md-1">
+        <div class="card shadow-lg border-0 mt-5">
+            <div class="card-body p-5">
+                <h2 class="mb-4 pb-3 border-bottom text-primary fw-bold"><i class="fa-solid fa-pen-nib me-2"></i> 开始创作</h2>
+
+                <form id="blogForm" action="/blog" method="POST" enctype="multipart/form-data">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-4">
+                                <label for="title" class="form-label fw-bold text-muted">文章标题</label>
+                                <input type="text" class="form-control form-control-lg border-0 bg-light" id="title" name="title" required placeholder="给你的灵感起个名字..." style="font-size: 1.5rem;">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-4">
+                                <label for="image" class="form-label fw-bold text-muted">封面图片</label>
+                                <input type="file" class="form-control" id="image" name="image" accept="image/*">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="tags" class="form-label fw-bold text-muted">标签 (用逗号分隔)</label>
+                        <input type="text" class="form-control bg-light border-0" id="tags" name="tags" placeholder="例如: 技术, 生活, Node.js">
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-4">
+                                <label for="category" class="form-label fw-bold text-muted">文章分类</label>
+                                <select class="form-select bg-light border-0" id="category" name="category">
+                                    <option value="">未分类</option>
+                                    <% categories.forEach(cat => { %>
+                                        <option value="<%= cat._id %>"><%= cat.name %></option>
+                                    <% }) %>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-4">
+                                <label class="form-label fw-bold text-muted">可见性</label>
+                                <div class="d-flex gap-4 mt-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="visibility" id="visibilityPublic" value="public" checked>
+                                        <label class="form-check-label" for="visibilityPublic">
+                                            <i class="fa-solid fa-earth-americas me-1"></i> 公开
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="visibility" id="visibilityPrivate" value="private">
+                                        <label class="form-check-label" for="visibilityPrivate">
+                                            <i class="fa-solid fa-lock me-1"></i> 私密 (仅自己可见)
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="content" class="form-label fw-bold text-muted">正文内容 <small class="text-secondary">(支持 Markdown 语法)</small></label>
+                        <textarea class="form-control" id="content" name="content" placeholder="在此挥洒你的灵感...&#10;&#10;# 标题&#10;&#10;**粗体** *斜体*&#10;&#10;```javascript&#10;// 代码块&#10;```"></textarea>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center mt-5">
+                        <!-- 自动保存状态指示器 -->
+                        <div class="autosave-indicator d-flex align-items-center" id="autosaveIndicator">
+                            <span class="save-status save-status-saved text-success d-none">
+                                <i class="fa-solid fa-cloud-check me-1"></i>
+                                <span class="status-text">已保存</span>
+                                <small class="text-muted ms-2" id="lastSavedTime">刚刚</small>
+                            </span>
+                            <span class="save-status save-status-saving text-muted d-none">
+                                <i class="fa-solid fa-spinner fa-spin me-1"></i>
+                                <span class="status-text">保存中...</span>
+                            </span>
+                            <span class="save-status save-status-pending text-warning d-none">
+                                <i class="fa-solid fa-cloud-arrow-up me-1" style="animation: pulse 1.5s ease-in-out infinite;"></i>
+                                <span class="status-text">有未保存更改</span>
+                            </span>
+                            <span class="save-status save-status-error text-danger d-none" style="cursor: pointer;" onclick="window.autosaveManager && window.autosaveManager.retrySave()">
+                                <i class="fa-solid fa-triangle-exclamation me-1"></i>
+                                <span class="status-text">保存失败，点击重试</span>
+                            </span>
+                            <span class="save-status save-status-offline text-secondary d-none">
+                                <i class="fa-solid fa-wifi-slash me-1"></i>
+                                <span class="status-text">离线模式</span>
+                            </span>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <a href="/" class="btn btn-outline-secondary px-4 rounded-pill">取消</a>
+                            <button type="button" class="btn btn-outline-primary px-4 rounded-pill" id="historyBtn" style="display: none;">
+                                <i class="fa-solid fa-clock-rotate-left me-1"></i> 历史版本
+                            </button>
+                            <button type="submit" class="btn btn-primary btn-lg px-5 rounded-pill shadow-sm hover-scale">
+                                <i class="fa-solid fa-paper-plane me-2"></i> 发布文章
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 版本历史侧边面板 -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="versionHistoryPanel" style="width: 400px;">
+    <div class="offcanvas-header border-bottom">
+        <h5 class="offcanvas-title fw-bold">
+            <i class="fa-solid fa-clock-rotate-left me-2 text-primary"></i>历史版本
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body p-0">
+        <div class="version-stats bg-light p-3 border-bottom">
+            <div class="d-flex justify-content-between">
+                <span class="text-muted">共 <strong id="totalVersions">0</strong> 个版本</span>
+            </div>
+        </div>
+        <div class="version-list" id="versionList"></div>
+        <div class="text-center p-3" id="loadMoreVersions" style="display: none;">
+            <button class="btn btn-outline-secondary btn-sm rounded-pill" onclick="versionHistoryManager.loadVersions()">
+                <i class="fa-solid fa-chevron-down me-1"></i> 加载更多
+            </button>
+        </div>
+        <div class="text-center p-4" id="versionLoading" style="display: none;">
+            <div class="spinner-border text-primary"></div>
+        </div>
+        <div class="text-center p-5 text-muted" id="noVersions" style="display: none;">
+            <i class="fa-solid fa-inbox fa-3x mb-3 text-light"></i>
+            <p>暂无历史版本</p>
+        </div>
+    </div>
+</div>
+
+<!-- 版本预览模态框 -->
+<div class="modal fade" id="versionPreviewModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold">
+                    <i class="fa-solid fa-eye me-2 text-primary"></i>版本预览 - v<span id="previewVersionNum"></span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="version-preview-card bg-light p-4 rounded">
+                    <h4 id="previewTitle" class="mb-3"></h4>
+                    <div id="previewBody" class="markdown-body" style="max-height: 60vh; overflow-y: auto;"></div>
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-light rounded-pill" data-bs-dismiss="modal">关闭</button>
+                <button type="button" class="btn btn-success rounded-pill" id="btnRestoreVersion">
+                    <i class="fa-solid fa-rotate-left me-1"></i> 恢复此版本
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+    .autosave-indicator {
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+    .save-status {
+        display: flex;
+        align-items: center;
+    }
+    .version-item {
+        transition: background-color 0.3s ease;
+    }
+    .version-item:hover {
+        background-color: #f8f9fa;
+    }
+    .version-item.version-current {
+        background: linear-gradient(135deg, rgba(232, 180, 184, 0.1), rgba(169, 189, 173, 0.1));
+        border-left: 3px solid var(--primary-color, #E8B4B8);
+    }
+</style>
+
+<script>
+// 初始化 Markdown 编辑器
+const easyMDE = new EasyMDE({
+    element: document.getElementById('content'),
+    spellChecker: false,
+    placeholder: '在此挥洒你的灵感...\n\n支持 Markdown 语法：\n# 一级标题\n## 二级标题\n**粗体** *斜体*\n\n```javascript\n// 代码块\nconst hello = "world";\n```\n\n- 列表项 1\n- 列表项 2',
+    toolbar: [
+        'bold', 'italic', 'heading', '|',
+        'quote', 'unordered-list', 'ordered-list', '|',
+        'link', 'image', 'code', 'table', '|',
+        'preview', 'side-by-side', 'fullscreen', '|',
+        'guide'
+    ],
+    autosave: {
+        enabled: false, // 禁用 EasyMDE 内置自动保存，使用我们的服务器端保存
+    },
+    renderingConfig: {
+        codeSyntaxHighlighting: true,
+    },
+    minHeight: '400px',
+});
+
+// 获取 URL 参数中的草稿 ID
+const urlParams = new URLSearchParams(window.location.search);
+const draftId = urlParams.get('draft');
+
+// 初始化自动保存管理器
+let autosaveManager;
+
+// 如果有草稿 ID，先加载草稿内容
+if (draftId) {
+    fetch(`/drafts/api/${draftId}`)
+        .then(res => res.json())
+        .then(result => {
+            if (result.success && result.draft) {
+                const draft = result.draft;
+                document.getElementById('title').value = draft.title || '';
+                easyMDE.value(draft.content || '');
+                if (draft.category) {
+                    document.getElementById('category').value = draft.category._id || draft.category;
+                }
+                if (draft.tags && draft.tags.length > 0) {
+                    document.getElementById('tags').value = draft.tags.join(', ');
+                }
+                if (draft.visibility) {
+                    document.querySelector(`input[name="visibility"][value="${draft.visibility}"]`).checked = true;
+                }
+
+                // 显示历史版本按钮
+                document.getElementById('historyBtn').style.display = 'inline-block';
+            }
+
+            // 初始化自动保存
+            initAutosave(draftId);
+        })
+        .catch(err => {
+            console.error('加载草稿失败:', err);
+            initAutosave(null);
+        });
+} else {
+    initAutosave(null);
+}
+
+function initAutosave(existingDraftId) {
+    autosaveManager = new AutosaveManager({
+        editor: easyMDE,
+        draftId: existingDraftId,
+        debounceDelay: 3000,
+        indicatorEl: '#autosaveIndicator',
+        onSaved: function(result) {
+            // 显示历史版本按钮
+            document.getElementById('historyBtn').style.display = 'inline-block';
+
+            // 初始化版本历史管理器
+            if (window.versionHistoryManager) {
+                window.versionHistoryManager.setDraftId(result.draft._id);
+            }
+        }
+    });
+    window.autosaveManager = autosaveManager;
+
+    // 初始化版本历史管理器
+    window.versionHistoryManager = new VersionHistoryManager({
+        draftId: existingDraftId,
+        offcanvasEl: '#versionHistoryPanel',
+        listContainer: '#versionList',
+        onRestore: function(draft) {
+            // 恢复内容到编辑器
+            document.getElementById('title').value = draft.title || '';
+            easyMDE.value(draft.content || '');
+            if (draft.category) {
+                document.getElementById('category').value = draft.category;
+            }
+            if (draft.tags && draft.tags.length > 0) {
+                document.getElementById('tags').value = draft.tags.join(', ');
+            }
+            if (draft.visibility) {
+                document.querySelector(`input[name="visibility"][value="${draft.visibility}"]`).checked = true;
+            }
+        }
+    });
+}
+
+// 历史版本按钮点击
+document.getElementById('historyBtn').addEventListener('click', function() {
+    if (window.versionHistoryManager) {
+        window.versionHistoryManager.open();
+    }
+});
+
+// 表单提交时，如果有草稿则通过发布 API 发布
+document.getElementById('blogForm').addEventListener('submit', async function(e) {
+    const currentDraftId = window.autosaveManager ? window.autosaveManager.getDraftId() : null;
+
+    if (currentDraftId) {
+        e.preventDefault();
+
+        try {
+            const response = await fetch(`/drafts/api/${currentDraftId}/publish`, {
+                method: 'POST'
+            });
+            const result = await response.json();
+
+            if (result.success) {
+                window.location.href = result.redirectUrl;
+            } else {
+                alert(result.message || '发布失败');
+            }
+        } catch (error) {
+            console.error('发布失败:', error);
+            alert('发布失败');
+        }
+    }
+    // 如果没有草稿 ID，使用原始表单提交
+});
+</script>
+
+<%- include('partials/footer') %>

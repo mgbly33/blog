@@ -1,0 +1,191 @@
+<%- include('partials/header') %>
+
+<div class="row animate__animated animate__fadeIn">
+    <!-- Profile Sidebar -->
+    <div class="col-md-4">
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-body text-center p-5">
+                <div class="position-relative d-inline-block mb-4">
+                    <img src="<%= user.avatar || 'https://ui-avatars.com/api/?name=' + user.username + '&background=random&size=200' %>"
+                         class="rounded-circle shadow-lg" width="150" height="150" style="object-fit: cover; border: 4px solid white;">
+                    <label for="avatarUpload" class="position-absolute bottom-0 end-0 bg-primary text-white rounded-circle p-2 shadow-sm cursor-pointer hover-scale" style="cursor: pointer;">
+                        <i class="fa-solid fa-camera"></i>
+                    </label>
+                </div>
+
+                <h3 class="fw-bold mb-1"><%= user.username %></h3>
+                <p class="text-muted mb-4"><i class="fa-solid fa-calendar-days me-2"></i> 加入于 <%= user.createdAt.toLocaleDateString() %></p>
+
+                <form action="/profile" method="POST" enctype="multipart/form-data" id="profileForm">
+                    <input type="file" id="avatarUpload" name="avatar" class="d-none" accept="image/*" onchange="this.form.submit()">
+
+                    <div class="mb-3 text-start">
+                        <label class="form-label fw-bold text-muted small">个人简介</label>
+                        <textarea class="form-control bg-light border-0" name="bio" rows="3"><%= user.bio %></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-outline-primary rounded-pill px-4 w-100">保存资料</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card shadow-sm border-0 bg-primary text-white">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span><i class="fa-solid fa-pen-nib me-2"></i> 发布文章</span>
+                    <span class="fw-bold h4 mb-0"><%= blogs.length %></span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span><i class="fa-solid fa-thumbs-up me-2"></i> 获赞总数</span>
+                    <!-- Simple calculation for demo -->
+                    <span class="fw-bold h4 mb-0"><%= blogs.reduce((acc, blog) => acc + (blog.likes ? blog.likes.length : 0), 0) %></span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <a href="/user/<%= user._id %>/following" class="text-white text-decoration-none hover-opacity">
+                        <i class="fa-solid fa-user-plus me-2"></i> 关注
+                    </a>
+                    <span class="fw-bold h5 mb-0"><%= user.following ? user.following.length : 0 %></span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <a href="/user/<%= user._id %>/followers" class="text-white text-decoration-none hover-opacity">
+                        <i class="fa-solid fa-users me-2"></i> 粉丝
+                    </a>
+                    <span class="fw-bold h5 mb-0"><%= user.followers ? user.followers.length : 0 %></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Change Password Card -->
+        <div class="card shadow-sm border-0 mb-4 mt-4">
+            <div class="card-body p-4">
+                <h5 class="fw-bold mb-3 text-secondary"><i class="fa-solid fa-key me-2"></i> 修改密码</h5>
+                <form action="/profile/password" method="POST">
+                    <div class="mb-3">
+                        <input type="password" class="form-control bg-light border-0" name="currentPassword" placeholder="当前密码" required>
+                    </div>
+                    <div class="mb-3">
+                        <input type="password" class="form-control bg-light border-0" name="newPassword" placeholder="新密码" required minlength="6">
+                    </div>
+                    <button type="submit" class="btn btn-outline-danger w-100 rounded-pill">更新密码</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- My Blogs List -->
+    <div class="col-md-8">
+        <h3 class="mb-4 pb-2 border-bottom fw-bold text-secondary"><i class="fa-solid fa-layer-group me-2"></i> 我的文章</h3>
+
+        <% if (blogs.length > 0) { %>
+            <% blogs.forEach(blog => { %>
+                <div class="card shadow-sm border-0 mb-3 hover-shadow transition">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <h5 class="card-title fw-bold mb-1">
+                                <a href="/blog/<%= blog._id %>" class="text-decoration-none text-dark hover-primary"><%= blog.title %></a>
+                            </h5>
+                            <small class="text-muted"><%= blog.createdAt.toLocaleDateString() %></small>
+                        </div>
+                        <p class="text-muted small mb-2">
+                            <i class="fa-regular fa-eye me-1"></i> <%= blog.views %>
+                            <i class="fa-solid fa-heart ms-3 me-1 text-danger"></i> <%= blog.likes ? blog.likes.length : 0 %>
+                        </p>
+                        <p class="card-text text-secondary mb-0"><%= blog.content.replace(/<[^>]*>/g, '').substring(0, 100) %>...</p>
+                    </div>
+                </div>
+            <% }) %>
+        <% } else { %>
+            <div class="text-center py-5 text-muted bg-white rounded shadow-sm">
+                <i class="fa-solid fa-pen-fancy fa-3x mb-3 text-light"></i>
+                <p>你还没有发布任何文章。</p>
+                <a href="/blog/new" class="btn btn-primary rounded-pill mt-2">去创作</a>
+            </div>
+        <% } %>
+
+        <!-- My Bookmarks List -->
+        <h3 class="mb-4 pb-2 border-bottom fw-bold text-secondary mt-5"><i class="fa-solid fa-star me-2"></i> 我的收藏</h3>
+
+        <% if (typeof bookmarkedBlogs !== 'undefined' && bookmarkedBlogs.length > 0) { %>
+            <% bookmarkedBlogs.forEach(blog => { %>
+                <div class="card shadow-sm border-0 mb-3 hover-shadow transition">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <h5 class="card-title fw-bold mb-1">
+                                <a href="/blog/<%= blog._id %>" class="text-decoration-none text-dark hover-primary"><%= blog.title %></a>
+                            </h5>
+                            <small class="text-muted">作者: <%= blog.author.username %></small>
+                        </div>
+                        <p class="text-muted small mb-0">
+                             <span class="badge bg-warning text-dark me-2">已收藏</span>
+                            <i class="fa-regular fa-eye me-1"></i> <%= blog.views %>
+                            <i class="fa-solid fa-heart ms-3 me-1 text-danger"></i> <%= blog.likes ? blog.likes.length : 0 %>
+                        </p>
+                    </div>
+                </div>
+            <% }) %>
+        <% } else { %>
+            <div class="text-center py-5 text-muted bg-white rounded shadow-sm">
+                <i class="fa-regular fa-star fa-3x mb-3 text-light"></i>
+                <p>你还没有收藏任何文章。</p>
+            </div>
+        <% } %>
+
+        <!-- My Comments List -->
+        <h3 class="mb-4 pb-2 border-bottom fw-bold text-secondary mt-5"><i class="fa-regular fa-comments me-2"></i> 我的评论</h3>
+
+        <% if (typeof comments !== 'undefined' && comments.length > 0) { %>
+            <% comments.forEach(comment => { %>
+                <div class="card shadow-sm border-0 mb-3 hover-shadow transition">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="card-title fw-bold mb-0">
+                                在 <a href="/blog/<%= comment.blogId._id %>" class="text-decoration-none text-dark hover-primary"><%= comment.blogId.title %></a> 下的评论
+                            </h6>
+                            <small class="text-muted"><%= comment.createdAt.toLocaleDateString() %></small>
+                        </div>
+                        <p class="text-secondary mb-3"><%= comment.content %></p>
+                        <div class="d-flex justify-content-end gap-2">
+                            <!-- Edit Trigger Modal -->
+                             <button type="button" class="btn btn-outline-primary btn-sm rounded-pill" data-bs-toggle="modal" data-bs-target="#editCommentModal<%= comment._id %>">
+                                <i class="fa-solid fa-pen"></i> 编辑
+                            </button>
+                            <form action="/comment/delete/<%= comment._id %>" method="POST" class="d-inline" onsubmit="return confirm('确定删除这条评论吗？');">
+                                <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill">
+                                    <i class="fa-solid fa-trash"></i> 删除
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Edit Comment Modal -->
+                <div class="modal fade" id="editCommentModal<%= comment._id %>" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <form action="/comment/update/<%= comment._id %>" method="POST">
+                                <div class="modal-header border-0">
+                                    <h5 class="modal-title fw-bold">编辑评论</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <textarea class="form-control" name="content" rows="4" required><%= comment.content %></textarea>
+                                </div>
+                                <div class="modal-footer border-0">
+                                    <button type="button" class="btn btn-light rounded-pill" data-bs-dismiss="modal">取消</button>
+                                    <button type="submit" class="btn btn-primary rounded-pill">保存修改</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            <% }) %>
+        <% } else { %>
+            <div class="text-center py-5 text-muted bg-white rounded shadow-sm">
+                <i class="fa-regular fa-comment-dots fa-3x mb-3 text-light"></i>
+                <p>你还没有发表过评论。</p>
+            </div>
+        <% } %>
+    </div>
+</div>
+
+<%- include('partials/footer') %>

@@ -1,0 +1,121 @@
+# Blog Backend Application Configuration
+
+spring:
+  application:
+    name: blog-backend
+  profiles:
+    default: dev
+
+  # MySQL Configuration (替换 MongoDB)
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+
+  # JPA Configuration
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQLDialect
+
+  # Redis Configuration
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 10000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+
+  # File Upload Configuration
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 10MB
+
+  # Jackson Configuration
+  jackson:
+    default-property-inclusion: non_null
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+
+  # 404 异常处理配置
+  mvc:
+    throw-exception-if-no-handler-found: true
+  web:
+    resources:
+      add-mappings: false
+
+# Server Configuration
+server:
+  port: ${SERVER_PORT:8080}
+  # 移除 context-path 以避免路由嵌套问题（Controller 已统一使用 /api 前缀）
+
+# JWT Configuration
+# 注意: 生产环境必须通过环境变量 JWT_SECRET 设置一个强密钥
+# 生成方式: openssl rand -base64 32
+jwt:
+  secret: ${JWT_SECRET}
+  expiration: ${JWT_EXPIRATION:86400000}  # 24小时
+  refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000}  # 7天
+
+# CORS Configuration
+cors:
+  allowed-origins: ${CORS_ORIGINS:http://localhost:3000,http://localhost:5173}
+  allowed-methods: GET,POST,PUT,DELETE,OPTIONS
+  allowed-headers: "*"
+  allow-credentials: true
+
+# Logging Configuration
+logging:
+  level:
+    root: INFO
+    com.blog: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+
+# Swagger Configuration
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+
+# Application Custom Configuration
+app:
+  upload:
+    path: ${UPLOAD_PATH:./uploads}
+    allowed-types: image/jpeg,image/png,image/gif,image/webp
+  pagination:
+    default-size: 10
+    max-size: 100
+  # Admin bootstrap configuration
+  # SECURITY WARNING: These must be provided explicitly when initialization is enabled.
+  admin:
+    username: ${ADMIN_USERNAME}
+    password: ${ADMIN_PASSWORD}
+    enabled: ${ADMIN_INIT_ENABLED:false}
+  feed:
+    site-url: ${FEED_SITE_URL:http://localhost:3000}
+    title: ${FEED_TITLE:Modern Blog}
+    description: ${FEED_DESCRIPTION:一个现代化的博客平台}
+
+# 安全警告: 生产环境必须通过环境变量 JWT_SECRET 设置一个强密钥
+# 不要使用硬编码的密钥，否则攻击者可伪造任意用户的JWT令牌

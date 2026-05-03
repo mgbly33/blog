@@ -1,0 +1,6 @@
+{
+  "watch": ["."],
+  "ext": "js,ts,json",
+  "ignore": ["node_modules", "tests"],
+  "exec": "npx ts-node app.ts"
+}
