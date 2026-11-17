@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams, Link } from 'react-router-dom'
-import { FiSend, FiMessageCircle, FiArrowLeft } from 'react-icons/fi'
+import { FiSend, FiMail, FiArrowLeft } from 'react-icons/fi'
 import toast from 'react-hot-toast'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
@@ -14,24 +14,22 @@ dayjs.locale('zh-cn')
 
 export default function Messages() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const activePartnerId = searchParams.get('chat')
+  const activePartnerId = searchParams.get('chat') || searchParams.get('to')
   const { user } = useAuthStore()
   const queryClient = useQueryClient()
   const [newMessage, setNewMessage] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // 获取会话列表
   const { data: conversationsData, isLoading: loadingConversations } = useQuery({
     queryKey: ['conversations'],
     queryFn: () => messageApi.getConversations(),
   })
 
-  // 获取对话详情
   const { data: chatData, isLoading: loadingChat } = useQuery({
     queryKey: ['conversation', activePartnerId],
     queryFn: () => messageApi.getConversation(activePartnerId!),
     enabled: !!activePartnerId,
-    refetchInterval: 5000, // 每5秒轮询新消息
+    refetchInterval: 5000,
   })
 
   const sendMutation = useMutation({
@@ -41,10 +39,9 @@ export default function Messages() {
       queryClient.invalidateQueries({ queryKey: ['conversation', activePartnerId] })
       queryClient.invalidateQueries({ queryKey: ['conversations'] })
     },
-    onError: () => toast.error('发送失败'),
+    onError: () => toast.error('书简投递失败'),
   })
 
-  // 自动滚动到最新消息
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [chatData])
@@ -57,109 +54,153 @@ export default function Messages() {
 
   const conversations: ConversationItem[] = conversationsData?.data || []
   const messages: MessageItem[] = chatData?.data?.content || []
-
-  // 获取当前聊天对象信息
-  const activePartner = conversations.find(c => c.partnerId === activePartnerId)?.partner
+  const activePartner = conversations.find((c) => String(c.partnerId) === String(activePartnerId))?.partner
 
   return (
-    <div className="max-w-5xl mx-auto">
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">站内信</h1>
+    <div className="max-w-5xl mx-auto space-y-6">
+      <header className="border-b border-hairline-light dark:border-hairline-dark pb-5">
+        <p className="text-[10px] font-editorial-mono uppercase tracking-[0.22em] text-vermilion font-semibold">
+          DIRECT MESSAGES
+        </p>
+        <h1 className="font-editorial-serif text-3xl font-bold text-ink-900 dark:text-ink-50 mt-0.5">
+          站内私信
+        </h1>
+      </header>
 
-      <div className="card p-0 overflow-hidden" style={{ height: '70vh' }}>
+      <div
+        className="card p-0 overflow-hidden"
+        style={{ height: '68vh' }}
+      >
         <div className="flex h-full">
-          {/* Conversation List */}
-          <div className={`w-80 border-r border-gray-100 flex flex-col ${activePartnerId ? 'hidden md:flex' : 'flex w-full md:w-80'}`}>
-            <div className="p-4 border-b border-gray-100">
-              <h2 className="font-medium text-gray-700">消息列表</h2>
+          {/* Left Correspondence Directory */}
+          <div
+            className={`w-80 border-r border-hairline-light dark:border-hairline-dark flex flex-col ${
+              activePartnerId ? 'hidden md:flex' : 'flex w-full md:w-80'
+            }`}
+          >
+            <div className="px-4 py-3 border-b border-hairline-light dark:border-hairline-dark text-[11px] font-editorial-mono uppercase tracking-widest text-ink-400">
+              会话列表 ({conversations.length})
             </div>
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto divide-y divide-hairline-light dark:divide-hairline-dark">
               {loadingConversations ? (
-                <div className="p-4 text-center text-gray-400">加载中...</div>
+                <div className="p-6 text-center text-xs font-editorial-mono text-ink-400">
+                  加载中...
+                </div>
               ) : conversations.length === 0 ? (
-                <div className="p-8 text-center">
-                  <FiMessageCircle size={40} className="mx-auto text-gray-300 mb-3" />
-                  <p className="text-gray-400 text-sm">暂无消息</p>
+                <div className="p-10 text-center space-y-2">
+                  <FiMail size={28} className="mx-auto text-ink-300" />
+                  <p className="text-xs text-ink-400">暂无私信记录</p>
                 </div>
               ) : (
-                conversations.map((conv) => (
-                  <button
-                    key={conv.partnerId}
-                    onClick={() => setSearchParams({ chat: conv.partnerId })}
-                    className={`w-full flex items-center gap-3 p-4 hover:bg-gray-50 transition-colors text-left ${
-                      activePartnerId === conv.partnerId ? 'bg-primary-50' : ''
-                    }`}
-                  >
-                    <img
-                      src={conv.partner.avatar || `https://ui-avatars.com/api/?name=${conv.partner.username}`}
-                      alt={conv.partner.username}
-                      className="w-10 h-10 rounded-full flex-shrink-0"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium text-gray-800 text-sm">{conv.partner.username}</span>
-                        <span className="text-xs text-gray-400">
-                          {conv.lastMessageAt ? dayjs(conv.lastMessageAt).fromNow() : ''}
-                        </span>
+                conversations.map((conv) => {
+                  const isActive = String(activePartnerId) === String(conv.partnerId)
+                  return (
+                    <button
+                      key={conv.partnerId}
+                      type="button"
+                      onClick={() => setSearchParams({ chat: conv.partnerId })}
+                      className={`w-full flex items-center gap-3 p-4 transition-colors text-left ${
+                        isActive
+                          ? 'bg-paper-200 dark:bg-ink-700 border-l-2 border-l-vermilion'
+                          : 'hover:bg-paper-100 dark:hover:bg-ink-900/40'
+                      }`}
+                    >
+                      <img
+                        src={
+                          conv.partner.avatar ||
+                          `https://ui-avatars.com/api/?name=${conv.partner.username}&background=161615&color=F5F3EE`
+                        }
+                        alt={conv.partner.username}
+                        className="w-9 h-9 rounded-full border border-hairline-light dark:border-hairline-dark object-cover shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-semibold text-ink-900 dark:text-ink-50 text-xs truncate">
+                            {conv.partner.username}
+                          </span>
+                          <span className="font-editorial-mono text-[10px] text-ink-400 shrink-0">
+                            {conv.lastMessageAt ? dayjs(conv.lastMessageAt).fromNow() : ''}
+                          </span>
+                        </div>
+                        <p className="text-xs text-ink-500 dark:text-ink-400 truncate mt-0.5">
+                          {conv.isLastFromMe ? '你: ' : ''}
+                          {conv.lastMessage}
+                        </p>
                       </div>
-                      <p className="text-xs text-gray-400 truncate mt-0.5">
-                        {conv.isLastFromMe ? '我: ' : ''}{conv.lastMessage}
-                      </p>
-                    </div>
-                    {conv.unreadCount > 0 && (
-                      <span className="w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center flex-shrink-0">
-                        {conv.unreadCount > 9 ? '9+' : conv.unreadCount}
-                      </span>
-                    )}
-                  </button>
-                ))
+                      {conv.unreadCount > 0 && (
+                        <span className="min-w-[18px] h-[18px] px-1 bg-vermilion text-white text-[10px] font-editorial-mono flex items-center justify-center shrink-0">
+                          {conv.unreadCount > 9 ? '9+' : conv.unreadCount}
+                        </span>
+                      )}
+                    </button>
+                  )
+                })
               )}
             </div>
           </div>
 
-          {/* Chat Area */}
+          {/* Right Letter Thread */}
           <div className={`flex-1 flex flex-col ${!activePartnerId ? 'hidden md:flex' : 'flex'}`}>
             {activePartnerId ? (
               <>
-                {/* Chat Header */}
-                <div className="flex items-center gap-3 p-4 border-b border-gray-100">
+                <div className="flex items-center gap-3 px-5 py-3 border-b border-hairline-light dark:border-hairline-dark">
                   <button
+                    type="button"
                     onClick={() => setSearchParams({})}
-                    className="md:hidden p-1 text-gray-500"
+                    className="md:hidden p-1 text-ink-500"
                   >
-                    <FiArrowLeft size={20} />
+                    <FiArrowLeft size={18} />
                   </button>
-                  {activePartner && (
-                    <Link to={`/user/${activePartner.username}`} className="flex items-center gap-2 hover:text-primary-600">
+                  {activePartner ? (
+                    <Link
+                      to={`/user/${activePartner.username}`}
+                      className="flex items-center gap-2.5 hover:text-vermilion transition-colors"
+                    >
                       <img
-                        src={activePartner.avatar || `https://ui-avatars.com/api/?name=${activePartner.username}`}
+                        src={
+                          activePartner.avatar ||
+                          `https://ui-avatars.com/api/?name=${activePartner.username}&background=161615&color=F5F3EE`
+                        }
                         alt={activePartner.username}
-                        className="w-8 h-8 rounded-full"
+                        className="w-7 h-7 rounded-full border border-hairline-light dark:border-hairline-dark"
                       />
-                      <span className="font-medium text-gray-800">{activePartner.username}</span>
+                      <span className="font-editorial-serif font-bold text-base text-ink-900 dark:text-ink-50">
+                        {activePartner.username}
+                      </span>
                     </Link>
+                  ) : (
+                    <span className="font-editorial-mono text-xs text-ink-500">
+                      CORRESPONDENT #{activePartnerId}
+                    </span>
                   )}
                 </div>
 
-                {/* Messages */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                <div className="flex-1 overflow-y-auto p-5 space-y-3 bg-paper-100/50 dark:bg-ink-900/30">
                   {loadingChat ? (
-                    <div className="text-center text-gray-400 py-8">加载中...</div>
+                    <div className="text-center text-xs text-ink-400 py-8">
+                      加载消息中...
+                    </div>
                   ) : messages.length === 0 ? (
-                    <div className="text-center text-gray-400 py-8">开始聊天吧！</div>
+                    <div className="text-center italic text-sm text-ink-400 py-10">
+                      发送第一条私信开始交流吧
+                    </div>
                   ) : (
                     messages.map((msg) => {
-                      const isMe = msg.senderId === user?.id
+                      const isMe = String(msg.senderId) === String(user?.id)
                       return (
-                        <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                        <div
+                          key={msg.id}
+                          className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
+                        >
                           <div
-                            className={`max-w-xs px-4 py-2 rounded-2xl text-sm ${
+                            className={`max-w-sm px-4 py-2.5 rounded-2xl text-sm border ${
                               isMe
-                                ? 'bg-primary-500 text-white rounded-br-md'
-                                : 'bg-gray-100 text-gray-800 rounded-bl-md'
+                                ? 'bg-ink-800 text-paper-50 dark:bg-ink-100 dark:text-ink-900 border-ink-800 dark:border-ink-100'
+                                : 'bg-paper-50 dark:bg-ink-800 text-ink-800 dark:text-ink-100 border-hairline-light dark:border-hairline-dark'
                             }`}
                           >
-                            <p>{msg.content}</p>
-                            <p className={`text-xs mt-1 ${isMe ? 'text-primary-100' : 'text-gray-400'}`}>
+                            <p className="leading-relaxed">{msg.content}</p>
+                            <p className="font-editorial-mono text-[10px] opacity-60 mt-1 text-right">
                               {dayjs(msg.createdAt).format('HH:mm')}
                             </p>
                           </div>
@@ -170,14 +211,16 @@ export default function Messages() {
                   <div ref={messagesEndRef} />
                 </div>
 
-                {/* Input */}
-                <form onSubmit={handleSend} className="p-4 border-t border-gray-100 flex gap-2">
+                <form
+                  onSubmit={handleSend}
+                  className="p-3.5 border-t border-hairline-light dark:border-hairline-dark flex gap-2 bg-paper-50/60 dark:bg-ink-800/60"
+                >
                   <input
                     type="text"
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
-                    placeholder="输入消息..."
-                    className="input flex-1"
+                    placeholder="输入私信内容..."
+                    className="input flex-1 text-sm"
                     maxLength={1000}
                   />
                   <button
@@ -185,15 +228,15 @@ export default function Messages() {
                     disabled={!newMessage.trim() || sendMutation.isPending}
                     className="btn btn-primary"
                   >
-                    <FiSend size={16} />
+                    <FiSend size={14} />
                   </button>
                 </form>
               </>
             ) : (
-              <div className="flex-1 flex items-center justify-center text-gray-400">
-                <div className="text-center">
-                  <FiMessageCircle size={48} className="mx-auto mb-3 text-gray-300" />
-                  <p>选择一个会话开始聊天</p>
+              <div className="flex-1 flex items-center justify-center text-ink-400">
+                <div className="text-center space-y-2">
+                  <FiMail size={32} className="mx-auto opacity-40" />
+                  <p className="text-sm">请从左侧选择一位对话联系人</p>
                 </div>
               </div>
             )}

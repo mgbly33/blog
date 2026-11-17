@@ -51,11 +51,6 @@ public class Series {
         Ongoing, Completed
     }
 
-    @Builder.Default
-    @OneToMany(mappedBy = "seriesId", cascade = CascadeType.ALL, orphanRemoval = false)
-    @OrderBy("chapterOrder ASC")
-    private Set<Blog> posts = new HashSet<>();
-
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;

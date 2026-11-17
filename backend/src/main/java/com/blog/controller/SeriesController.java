@@ -40,11 +40,10 @@ public class SeriesController {
     public ResponseEntity<ApiResponse<Void>> deleteSeries(
             @PathVariable Long id) {
         seriesService.deleteSeries(id);
-        return ResponseEntity.ok(ApiResponse.success("\u4e13\u680f\u5220\u9664\u6210\u529f", null));
+        return ResponseEntity.ok(ApiResponse.success("专栏删除成功", null));
     }
 
     @GetMapping
-    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<PageDto<SeriesDto.Response>>> getSeriesList(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {

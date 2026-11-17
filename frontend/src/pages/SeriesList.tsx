@@ -1,10 +1,13 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { FiBook, FiCheckCircle, FiEdit2, FiPlus, FiTrash2 } from 'react-icons/fi'
+import { FiArrowUpRight, FiBookOpen, FiCheckCircle, FiEdit2, FiPlus, FiTrash2 } from 'react-icons/fi'
 import toast from 'react-hot-toast'
 import { seriesApi, type CreateSeriesRequest } from '@/api/series'
 import { useAuthStore } from '@/stores/authStore'
+import ImageUploader from '@/components/ImageUploader'
+import StateCard from '@/components/ui/StateCard'
+import { ConfirmModal } from '@/components/ui'
 import type { Series } from '@/types'
 
 export default function SeriesList() {
@@ -14,8 +17,10 @@ export default function SeriesList() {
 
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [editingSeries, setEditingSeries] = useState<Series | null>(null)
+  const [deletingSeries, setDeletingSeries] = useState<Series | null>(null)
   const [formTitle, setFormTitle] = useState('')
   const [formDescription, setFormDescription] = useState('')
+  const [formCoverUrl, setFormCoverUrl] = useState('')
 
   const { data, isLoading } = useQuery({
     queryKey: ['series-list'],
@@ -24,24 +29,34 @@ export default function SeriesList() {
 
   const refreshSeries = () => {
     queryClient.invalidateQueries({ queryKey: ['series-list'] })
+    queryClient.invalidateQueries({ queryKey: ['home-series'] })
+    queryClient.invalidateQueries({ queryKey: ['series'] })
   }
 
   const createMutation = useMutation({
     mutationFn: (payload: CreateSeriesRequest) => seriesApi.createSeries(payload),
     onSuccess: () => {
       refreshSeries()
-      toast.success('专栏创建成功')
+      toast.success('系列专栏已创建')
       resetForm()
     },
     onError: () => toast.error('创建失败'),
   })
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, ...payload }: { id: string; title?: string; description?: string; status?: 'Ongoing' | 'Completed' }) =>
-      seriesApi.updateSeries(id, payload),
+    mutationFn: ({
+      id,
+      ...payload
+    }: {
+      id: string
+      title?: string
+      description?: string
+      coverUrl?: string
+      status?: 'Ongoing' | 'Completed'
+    }) => seriesApi.updateSeries(id, payload),
     onSuccess: () => {
       refreshSeries()
-      toast.success('专栏已更新')
+      toast.success('专栏信息已更新')
       resetForm()
     },
     onError: () => toast.error('更新失败'),
@@ -51,6 +66,7 @@ export default function SeriesList() {
     mutationFn: (id: string) => seriesApi.deleteSeries(id),
     onSuccess: () => {
       refreshSeries()
+      setDeletingSeries(null)
       toast.success('专栏已删除')
     },
     onError: () => toast.error('删除失败'),
@@ -61,180 +77,222 @@ export default function SeriesList() {
     setEditingSeries(null)
     setFormTitle('')
     setFormDescription('')
-  }
-
-  const ensureAdmin = () => {
-    if (isAdminUser) return true
-    toast.error('仅管理员可以管理专栏')
-    return false
+    setFormCoverUrl('')
   }
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault()
-    if (!ensureAdmin()) return
+    if (!isAdminUser) return
     if (!formTitle.trim()) {
-      toast.error('请输入专栏标题')
+      toast.error('请输入专栏名称')
       return
     }
     if (editingSeries) {
-      updateMutation.mutate({ id: editingSeries.id, title: formTitle.trim(), description: formDescription.trim() || undefined })
+      updateMutation.mutate({
+        id: editingSeries.id,
+        title: formTitle.trim(),
+        description: formDescription.trim() || undefined,
+        coverUrl: formCoverUrl || undefined,
+      })
     } else {
-      createMutation.mutate({ title: formTitle.trim(), description: formDescription.trim() || undefined })
+      createMutation.mutate({
+        title: formTitle.trim(),
+        description: formDescription.trim() || undefined,
+        coverUrl: formCoverUrl || undefined,
+      })
     }
   }
 
   const handleEdit = (series: Series) => {
-    if (!ensureAdmin()) return
     setEditingSeries(series)
     setFormTitle(series.title)
     setFormDescription(series.description || '')
+    setFormCoverUrl(series.coverUrl || '')
     setShowCreateForm(true)
   }
 
-  const handleDelete = (series: Series) => {
-    if (!ensureAdmin()) return
-    if (confirm(`确定要删除专栏「${series.title}」吗？关联文章不会被删除。`)) {
-      deleteMutation.mutate(series.id)
-    }
-  }
-
   const handleToggleStatus = (series: Series) => {
-    if (!ensureAdmin()) return
     const nextStatus = series.status === 'Ongoing' ? 'Completed' : 'Ongoing'
     updateMutation.mutate({ id: series.id, status: nextStatus })
   }
 
-  const seriesList = data?.data?.content || []
+  const seriesList = (data?.data?.content || []).filter((s) => Boolean(s.title?.trim()))
 
   return (
-    <div className="max-w-5xl mx-auto page-shell">
-      <section className="panel-surface">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="section-title">{isAdminUser ? '专栏管理' : '专栏目录'}</h1>
-            <p className="section-subtitle">
-              {isAdminUser ? '由管理员统一维护专栏，供作者发布文章时选择。' : '专栏由管理员统一创建，你可以在发布文章时选择归属专栏。'}
-            </p>
-          </div>
-          {isAdminUser && (
-            <button
-              type="button"
-              onClick={() => {
-                resetForm()
-                setShowCreateForm(true)
-              }}
-              className="btn btn-primary"
-            >
-              <FiPlus size={16} />
-              新建专栏
-            </button>
-          )}
+    <div className="max-w-6xl mx-auto space-y-10 pb-8">
+      <header className="border-b border-hairline-light dark:border-hairline-dark pb-8 flex flex-wrap items-end justify-between gap-4">
+        <div className="space-y-2">
+          <p className="text-[10px] font-editorial-mono uppercase tracking-[0.22em] text-vermilion font-semibold">
+            SERIES & COLUMNS
+          </p>
+          <h1 className="font-editorial-serif text-3xl sm:text-5xl font-bold text-ink-900 dark:text-ink-50">
+            系列专栏合集
+          </h1>
+          <p className="text-sm text-ink-500 dark:text-ink-400 max-w-xl">
+            围绕特定技术专题或思考脉络整理的系列文章连载，按章节顺序循序渐进阅读。
+          </p>
         </div>
-      </section>
+
+        {isAdminUser && (
+          <button
+            type="button"
+            onClick={() => {
+              if (showCreateForm) resetForm()
+              else setShowCreateForm(true)
+            }}
+            className="btn btn-primary"
+          >
+            <FiPlus size={15} />
+            <span>{showCreateForm ? '收起表单' : '新建专栏'}</span>
+          </button>
+        )}
+      </header>
 
       {isAdminUser && showCreateForm && (
-        <section className="panel-surface">
-          <h3 className="font-bold text-gray-800 mb-4">{editingSeries ? '编辑专栏' : '新建专栏'}</h3>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">专栏标题</label>
-              <input
-                type="text"
-                className="input"
-                maxLength={100}
-                value={formTitle}
-                onChange={(event) => setFormTitle(event.target.value)}
-                placeholder="请输入专栏标题"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">专栏描述</label>
-              <textarea
-                className="input min-h-[90px] resize-y"
-                maxLength={500}
-                value={formDescription}
-                onChange={(event) => setFormDescription(event.target.value)}
-                placeholder="请输入专栏描述"
-              />
-            </div>
-            <div className="flex gap-2">
-              <button type="submit" className="btn btn-primary" disabled={createMutation.isPending || updateMutation.isPending}>
-                {editingSeries ? '保存修改' : '创建专栏'}
-              </button>
-              <button type="button" className="btn btn-secondary" onClick={resetForm}>
-                取消
-              </button>
-            </div>
-          </form>
-        </section>
+        <form onSubmit={handleSubmit} className="card space-y-4 hover:transform-none">
+          <h2 className="font-editorial-serif text-xl font-bold text-ink-900 dark:text-ink-50">
+            {editingSeries ? '编辑系列专栏' : '新建系列专栏'}
+          </h2>
+          <div>
+            <label className="block text-xs text-ink-500 mb-1.5">专栏名称</label>
+            <input
+              type="text"
+              value={formTitle}
+              onChange={(e) => setFormTitle(e.target.value)}
+              className="input"
+              placeholder="例如：现代前端工程化实战"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-ink-500 mb-1.5">专栏简介</label>
+            <textarea
+              value={formDescription}
+              onChange={(e) => setFormDescription(e.target.value)}
+              className="input min-h-[88px]"
+              placeholder="概述该系列专栏的核心内容..."
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-ink-500 mb-1.5">专栏封面（可选）</label>
+            <ImageUploader
+              value={formCoverUrl}
+              onChange={setFormCoverUrl}
+              onRemove={() => setFormCoverUrl('')}
+            />
+          </div>
+          <div className="flex justify-end gap-2.5">
+            <button type="button" onClick={resetForm} className="btn btn-secondary btn-sm">
+              取消
+            </button>
+            <button
+              type="submit"
+              disabled={createMutation.isPending || updateMutation.isPending}
+              className="btn btn-primary btn-sm"
+            >
+              {editingSeries ? '保存修改' : '创建专栏'}
+            </button>
+          </div>
+        </form>
       )}
 
       {isLoading ? (
-        <section className="panel-surface text-center py-10 text-gray-500">加载中...</section>
+        <StateCard type="loading" title="正在加载系列专栏..." />
       ) : seriesList.length === 0 ? (
-        <section className="panel-surface text-center py-10">
-          <FiBook size={42} className="mx-auto text-gray-300 mb-3" />
-          <p className="text-gray-500">当前暂无专栏</p>
-          <p className="text-sm text-gray-400 mt-1">{isAdminUser ? '请先创建专栏，供用户投稿使用。' : '请联系管理员创建专栏。'}</p>
-        </section>
+        <StateCard type="empty" title="暂无系列专栏" description="创建系列专栏后将展示在这里。" />
       ) : (
-        <section className="space-y-4">
-          {seriesList.map((series) => (
-            <article key={series.id} className="panel-surface">
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Link to={`/series/${series.id}`} className="truncate text-xl font-bold text-gray-800 hover:text-primary-600">
-                      {series.title}
-                    </Link>
-                    <span
-                      className={`status-chip ${
-                        series.status === 'Completed' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
-                      }`}
-                    >
-                      {series.status === 'Completed' ? '已完结' : '连载中'}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-7">
+          {seriesList.map((series, idx) => {
+            const chapterCount = series.posts?.length || 0
+            return (
+              <div
+                key={series.id}
+                className="group relative card p-7 flex flex-col justify-between transition-all"
+              >
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between text-xs text-ink-400">
+                    <span className="text-vermilion font-semibold flex items-center gap-1.5">
+                      <FiBookOpen size={13} />
+                      <span>专栏 #{String(idx + 1).padStart(2, '0')}</span>
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      {series.status === 'Completed' && (
+                        <FiCheckCircle size={12} className="text-vermilion" />
+                      )}
+                      {series.status === 'Completed' ? '已完结' : '连载中'} · {chapterCount} 篇文章
                     </span>
                   </div>
-                  {series.description && <p className="mt-2 text-sm text-gray-600">{series.description}</p>}
-                  <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-gray-500">
-                    <span>{series.posts?.length || 0} 篇文章</span>
-                    <span>更新于 {new Date(series.updatedAt).toLocaleDateString('zh-CN')}</span>
-                  </div>
+
+                  <Link to={`/series/${series.id}`} className="block space-y-2">
+                    <h2 className="font-editorial-serif text-2xl sm:text-3xl font-bold text-ink-900 dark:text-ink-50 group-hover:text-vermilion transition-colors">
+                      {series.title}
+                    </h2>
+                    {series.description && (
+                      <p className="text-xs sm:text-sm text-ink-500 dark:text-ink-400 line-clamp-2 leading-relaxed">
+                        {series.description}
+                      </p>
+                    )}
+                  </Link>
                 </div>
 
-                {isAdminUser && (
+                <div className="pt-5 mt-6 border-t border-hairline-light dark:border-hairline-dark flex items-center justify-between text-xs">
+                  <span className="text-ink-400">
+                    作者：{series.author?.username || '管理员'}
+                  </span>
+
                   <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleToggleStatus(series)}
-                      className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100"
-                      title={series.status === 'Ongoing' ? '标记为完结' : '标记为连载中'}
+                    {isAdminUser && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleStatus(series)}
+                          className="px-2.5 py-1 rounded-full border border-hairline-light dark:border-hairline-dark text-ink-500 hover:text-vermilion hover:border-vermilion transition-colors"
+                        >
+                          {series.status === 'Ongoing' ? '标记完结' : '恢复连载'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleEdit(series)}
+                          className="p-1.5 text-ink-400 hover:text-ink-800 dark:hover:text-ink-100"
+                          title="编辑专栏"
+                        >
+                          <FiEdit2 size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDeletingSeries(series)}
+                          className="p-1.5 text-ink-400 hover:text-rose-600"
+                          title="删除专栏"
+                        >
+                          <FiTrash2 size={14} />
+                        </button>
+                      </>
+                    )}
+                    <Link
+                      to={`/series/${series.id}`}
+                      className="inline-flex items-center gap-1 font-medium text-ink-800 dark:text-ink-100 group-hover:text-vermilion"
                     >
-                      <FiCheckCircle size={18} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleEdit(series)}
-                      className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100"
-                      title="编辑专栏"
-                    >
-                      <FiEdit2 size={18} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(series)}
-                      className="rounded-lg p-2 text-red-500 transition-colors hover:bg-red-50"
-                      title="删除专栏"
-                    >
-                      <FiTrash2 size={18} />
-                    </button>
+                      <span>进入专栏</span>
+                      <FiArrowUpRight size={14} />
+                    </Link>
                   </div>
-                )}
+                </div>
               </div>
-            </article>
-          ))}
-        </section>
+            )
+          })}
+        </div>
       )}
+
+      <ConfirmModal
+        isOpen={Boolean(deletingSeries)}
+        onClose={() => setDeletingSeries(null)}
+        onConfirm={() => deletingSeries && deleteMutation.mutate(deletingSeries.id)}
+        title="删除系列专栏"
+        message={`确定要删除专栏「${deletingSeries?.title}」吗？专栏内的文章不会被删除。`}
+        confirmText="确认删除"
+        cancelText="取消"
+        variant="danger"
+        isLoading={deleteMutation.isPending}
+      />
     </div>
   )
 }

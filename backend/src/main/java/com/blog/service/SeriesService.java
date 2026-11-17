@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -97,14 +98,25 @@ public class SeriesService {
                 .collect(Collectors.toMap(User::getId, Function.identity()));
         Map<Long, List<Blog>> postsBySeriesId = seriesIds.isEmpty()
                 ? Map.of()
-                : blogRepository.findBySeriesIdInOrderBySeriesIdAscChapterOrderAsc(seriesIds)
+                : blogRepository.findBySeriesIdInAndStatusAndVisibilityOrderBySeriesIdAscChapterOrderAsc(
+                                seriesIds, Blog.Status.APPROVED, Blog.Visibility.PUBLIC)
                         .stream()
                         .collect(Collectors.groupingBy(Blog::getSeriesId));
+
+        Set<Long> postAuthorIds = postsBySeriesId.values().stream()
+                .flatMap(List::stream)
+                .map(Blog::getAuthorId)
+                .collect(Collectors.toSet());
+        Map<Long, User> postAuthorMap = postAuthorIds.isEmpty()
+                ? Map.of()
+                : userRepository.findAllById(postAuthorIds).stream()
+                        .collect(Collectors.toMap(User::getId, Function.identity()));
 
         return PageDto.from(seriesPage, series -> toResponse(
                 series,
                 authorMap.get(series.getAuthorId()),
-                postsBySeriesId.getOrDefault(series.getId(), List.of())));
+                postsBySeriesId.getOrDefault(series.getId(), List.of()),
+                postAuthorMap));
     }
 
     public SeriesDto.Response getSeriesById(Long id) {
@@ -115,13 +127,19 @@ public class SeriesService {
 
     private SeriesDto.Response toResponse(Series series) {
         User author = userRepository.findById(series.getAuthorId()).orElse(null);
-        List<Blog> posts = blogRepository.findBySeriesIdOrderByChapterOrderAsc(series.getId());
-        return toResponse(series, author, posts);
+        List<Blog> posts = blogRepository.findBySeriesIdAndStatusAndVisibilityOrderByChapterOrderAsc(
+                series.getId(), Blog.Status.APPROVED, Blog.Visibility.PUBLIC);
+        Set<Long> postAuthorIds = posts.stream().map(Blog::getAuthorId).collect(Collectors.toSet());
+        Map<Long, User> postAuthorMap = postAuthorIds.isEmpty()
+                ? Map.of()
+                : userRepository.findAllById(postAuthorIds).stream()
+                        .collect(Collectors.toMap(User::getId, Function.identity()));
+        return toResponse(series, author, posts, postAuthorMap);
     }
 
-    private SeriesDto.Response toResponse(Series series, User author, List<Blog> posts) {
+    private SeriesDto.Response toResponse(Series series, User author, List<Blog> posts, Map<Long, User> postAuthorMap) {
         List<BlogDto.BlogListItem> postDtos = posts.stream()
-                .map(this::toBlogListItem)
+                .map(post -> toBlogListItem(post, postAuthorMap.get(post.getAuthorId())))
                 .collect(Collectors.toList());
 
         return SeriesDto.Response.builder()
@@ -141,22 +159,29 @@ public class SeriesService {
                 .build();
     }
 
-    private BlogDto.BlogListItem toBlogListItem(Blog blog) {
+    private BlogDto.BlogListItem toBlogListItem(Blog blog, User postAuthor) {
         return BlogDto.BlogListItem.builder()
                 .id(blog.getId())
                 .title(blog.getTitle())
                 .summary(blog.getSummary())
                 .image(blog.getImage())
                 .categoryId(blog.getCategoryId())
-                .tags(blog.getTags())
-                .readTime(blog.getReadTime())
-                .views(blog.getViews())
-                .likesCount(blog.getLikesCount())
-                .commentCount(blog.getCommentCount())
-                .isSticky(blog.getIsSticky())
+                .tags(blog.getTags() != null ? new java.util.HashSet<>(blog.getTags()) : Set.of())
+                .status(blog.getStatus())
+                .readTime(blog.getReadTime() != null ? blog.getReadTime() : 1)
+                .views(blog.getViews() != null ? blog.getViews() : 0)
+                .likesCount(blog.getLikesCount() != null ? blog.getLikesCount() : 0)
+                .commentCount(blog.getCommentCount() != null ? blog.getCommentCount() : 0)
+                .isSticky(blog.getIsSticky() != null ? blog.getIsSticky() : false)
+                .publishAt(blog.getPublishAt())
                 .createdAt(blog.getCreatedAt())
                 .seriesId(blog.getSeriesId())
                 .chapterOrder(blog.getChapterOrder())
+                .author(postAuthor != null ? BlogDto.AuthorInfo.builder()
+                        .id(postAuthor.getId())
+                        .username(postAuthor.getUsername())
+                        .avatar(postAuthor.getAvatar())
+                        .build() : null)
                 .build();
     }
 }

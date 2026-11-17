@@ -52,8 +52,9 @@ export interface BlogListItem {
   title: string
   summary: string | null
   image: string | null
-  category: string | null
-  tags: string[]
+  categoryId?: string | null
+  category?: string | null
+  tags: Array<string | number>
   status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'SCHEDULED' | 'ARCHIVED'
   readTime: number
   views: number
@@ -63,6 +64,8 @@ export interface BlogListItem {
   author: AuthorInfo
   createdAt: string
   publishAt?: string | null
+  seriesId?: string | null
+  chapterOrder?: number | null
 }
 
 export interface AuthorInfo {
@@ -111,8 +114,9 @@ export interface Draft {
   id: string
   title: string
   content: string
-  category: string | null
-  tags: string[]
+  categoryId?: string | null
+  category?: string | null
+  tags: Array<string | number>
   image: string | null
   blogId: string | null
   wordCount: number

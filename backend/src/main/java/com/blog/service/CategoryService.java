@@ -86,10 +86,10 @@ public class CategoryService {
     }
 
     private CategoryResponse toCategoryResponse(Category category) {
-        // 只统计公开已审核的博客数量
+        // 只统计公开已审核的博客数量（使用 size=1 仅触发 COUNT 与单行查询，避免全表加载）
         long blogCount = blogRepository.findByCategoryIdAndStatusAndVisibility(
                 category.getId(), Blog.Status.APPROVED, Blog.Visibility.PUBLIC,
-                org.springframework.data.domain.Pageable.unpaged()).getTotalElements();
+                org.springframework.data.domain.PageRequest.of(0, 1)).getTotalElements();
 
         return CategoryResponse.builder()
                 .id(category.getId().toString())

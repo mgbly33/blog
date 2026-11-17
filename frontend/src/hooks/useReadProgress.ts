@@ -13,34 +13,37 @@ export function useReadProgress({ blogId, enabled = true, debounceMs = 3000 }: U
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastProgressRef = useRef<number>(0)
   const lastScrollRef = useRef<number>(0)
+  const hasScrolledRef = useRef<boolean>(false)
 
   const reportProgress = useCallback(() => {
-    if (!blogId || !isAuthenticated) return
+    if (!blogId || !isAuthenticated || !hasScrolledRef.current) return
 
-    const progress = lastProgressRef.current
-    const scrollPosition = lastScrollRef.current
-
-    historyApi.updateProgress(blogId, progress, scrollPosition).catch(() => {
+    historyApi.updateProgress(blogId, lastProgressRef.current, lastScrollRef.current).catch(() => {
       // Silent failure: do not interrupt reading.
     })
   }, [blogId, isAuthenticated])
 
   const reportProgressOnUnload = useCallback(() => {
-    if (!blogId || !isAuthenticated) return
+    if (!blogId || !isAuthenticated || !hasScrolledRef.current) return
 
     historyApi.updateProgressKeepalive(blogId, lastProgressRef.current, lastScrollRef.current)
   }, [blogId, isAuthenticated])
 
   useEffect(() => {
+    hasScrolledRef.current = false
+    lastProgressRef.current = 0
+    lastScrollRef.current = 0
+
     if (!enabled || !blogId || !isAuthenticated) return
 
     const calculateProgress = () => {
       const scrollTop = window.scrollY || document.documentElement.scrollTop
       const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight
-      const progress = scrollHeight > 0 ? Math.min(100, Math.round((scrollTop / scrollHeight) * 100)) : 0
+      const progress = scrollHeight > 0 ? Math.min(100, Math.round((scrollTop / scrollHeight) * 100)) : 100
 
+      hasScrolledRef.current = true
       lastProgressRef.current = progress
-      lastScrollRef.current = scrollTop
+      lastScrollRef.current = Math.max(0, Math.round(scrollTop))
 
       if (timerRef.current) clearTimeout(timerRef.current)
       timerRef.current = setTimeout(reportProgress, debounceMs)

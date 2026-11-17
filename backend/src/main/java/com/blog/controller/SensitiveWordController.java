@@ -7,13 +7,16 @@ import com.blog.util.SensitiveWordFilter;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/admin/sensitive-words")
+@PreAuthorize("hasRole('ADMIN')")
 @RequiredArgsConstructor
 public class SensitiveWordController {
 
@@ -100,17 +103,18 @@ public class SensitiveWordController {
      */
     @PostMapping("/check")
     public ResponseEntity<?> checkText(@RequestBody CheckRequest request) {
-        SensitiveWordFilter.CheckResult result = sensitiveWordService.checkContent(request.text);
+        String text = request != null && request.text != null ? request.text : "";
+        SensitiveWordFilter.CheckResult result = sensitiveWordService.checkContent(text);
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("passed", result.passed);
+        payload.put("matchCount", result.matches.size());
+        payload.put("matches", result.matches.stream().map(m ->
+                Map.of("word", m.word, "level", m.level.name(), "startIndex", m.startIndex)
+        ).toList());
+        payload.put("highestLevel", result.highestLevel != null ? result.highestLevel.name() : null);
         return ResponseEntity.ok(Map.of(
                 "success", true,
-                "data", Map.of(
-                        "passed", result.passed,
-                        "matchCount", result.matches.size(),
-                        "matches", result.matches.stream().map(m ->
-                                Map.of("word", m.word, "level", m.level.name(), "startIndex", m.startIndex)
-                        ).toList(),
-                        "highestLevel", result.highestLevel != null ? result.highestLevel.name() : null
-                )
+                "data", payload
         ));
     }
 

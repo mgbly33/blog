@@ -38,12 +38,12 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
             "ORDER BY m.createdAt DESC")
     Page<Message> findLatestConversationMessage(Long userId1, Long userId2, Pageable pageable);
 
-    @Query(value = "SELECT DISTINCT partner_id FROM (" +
+    @Query(value = "SELECT partner_id FROM (" +
             "SELECT receiver_id AS partner_id, MAX(created_at) AS last_time FROM messages WHERE sender_id = :userId GROUP BY receiver_id " +
             "UNION ALL " +
             "SELECT sender_id AS partner_id, MAX(created_at) AS last_time FROM messages WHERE receiver_id = :userId GROUP BY sender_id" +
-            ") AS conversations ORDER BY last_time DESC", nativeQuery = true)
-    List<Long> findConversationPartnerIds(Long userId);
+            ") AS conversations GROUP BY partner_id ORDER BY MAX(last_time) DESC", nativeQuery = true)
+    List<Long> findConversationPartnerIds(@Param("userId") Long userId);
 
     @Modifying
     @Query("UPDATE Message m SET m.isRead = true WHERE m.senderId = :senderId AND m.receiverId = :receiverId AND m.isRead = false")

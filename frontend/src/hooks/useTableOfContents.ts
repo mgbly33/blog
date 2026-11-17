@@ -10,54 +10,56 @@ interface TocItem {
  * 从 Markdown 内容中提取标题生成 TOC
  * 同时追踪阅读进度和当前高亮标题
  */
-export function useTableOfContents(contentRef: React.RefObject<HTMLElement | null>) {
+export function useTableOfContents(
+  contentRef: React.RefObject<HTMLElement | null>,
+  contentKey?: string | number | null
+) {
   const [toc, setToc] = useState<TocItem[]>([])
   const [activeId, setActiveId] = useState<string>('')
   const [readingProgress, setReadingProgress] = useState(0)
 
-  // 从 DOM 中提取标题
   useEffect(() => {
-    if (!contentRef.current) return
-
-    const observer = new MutationObserver(() => {
-      extractHeadings()
-    })
+    if (!contentRef.current) {
+      setToc([])
+      return
+    }
 
     const extractHeadings = () => {
       if (!contentRef.current) return
       const headings = contentRef.current.querySelectorAll('h1, h2, h3, h4')
       const items: TocItem[] = Array.from(headings).map((heading, index) => {
-        // 给标题添加 id 以便锚点跳转
         const id = heading.id || `heading-${index}`
         if (!heading.id) heading.id = id
 
         return {
           id,
           text: heading.textContent || '',
-          level: parseInt(heading.tagName.charAt(1)),
+          level: parseInt(heading.tagName.charAt(1), 10),
         }
       })
       setToc(items)
+      if (items.length > 0) {
+        setActiveId((prev) => prev || items[0].id)
+      }
     }
 
-    // 初始提取
     extractHeadings()
 
-    // 监听 DOM 变化（Markdown 渲染完成后）
+    const observer = new MutationObserver(() => {
+      extractHeadings()
+    })
+
     observer.observe(contentRef.current, { childList: true, subtree: true })
 
     return () => observer.disconnect()
-  }, [contentRef])
+  }, [contentRef, contentKey])
 
-  // 追踪滚动位置 → 高亮当前标题 + 阅读进度
   const handleScroll = useCallback(() => {
-    // 计算阅读进度
     const scrollTop = window.scrollY || document.documentElement.scrollTop
     const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight
     const progress = scrollHeight > 0 ? Math.min(100, Math.round((scrollTop / scrollHeight) * 100)) : 0
     setReadingProgress(progress)
 
-    // 查找当前可见的标题
     if (toc.length === 0) return
 
     let currentId = toc[0]?.id || ''
@@ -65,7 +67,7 @@ export function useTableOfContents(contentRef: React.RefObject<HTMLElement | nul
       const element = document.getElementById(item.id)
       if (element) {
         const rect = element.getBoundingClientRect()
-        if (rect.top <= 100) {
+        if (rect.top <= 120) {
           currentId = item.id
         }
       }
@@ -74,6 +76,7 @@ export function useTableOfContents(contentRef: React.RefObject<HTMLElement | nul
   }, [toc])
 
   useEffect(() => {
+    handleScroll()
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
   }, [handleScroll])
@@ -81,7 +84,7 @@ export function useTableOfContents(contentRef: React.RefObject<HTMLElement | nul
   const scrollToHeading = useCallback((id: string) => {
     const element = document.getElementById(id)
     if (element) {
-      const top = element.getBoundingClientRect().top + window.scrollY - 80
+      const top = element.getBoundingClientRect().top + window.scrollY - 88
       window.scrollTo({ top, behavior: 'smooth' })
     }
   }, [])

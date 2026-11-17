@@ -1,4 +1,5 @@
 import { useEffect, useCallback, useRef, ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { IoClose } from 'react-icons/io5'
 
 interface ModalProps {
@@ -33,7 +34,6 @@ export default function Modal({
 }: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null)
 
-  // Handle ESC key press
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (closeOnEsc && e.key === 'Escape') {
@@ -43,7 +43,6 @@ export default function Modal({
     [closeOnEsc, onClose]
   )
 
-  // Lock body scroll when modal is open
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden'
@@ -58,16 +57,15 @@ export default function Modal({
     }
   }, [isOpen, handleKeyDown])
 
-  // Handle overlay click
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (closeOnOverlayClick && e.target === e.currentTarget) {
       onClose()
     }
   }
 
-  if (!isOpen) return null
+  if (!isOpen || typeof document === 'undefined') return null
 
-  return (
+  return createPortal(
     <div
       className="modal-overlay"
       onClick={handleOverlayClick}
@@ -93,13 +91,14 @@ export default function Modal({
                 onClick={onClose}
                 aria-label="关闭弹窗"
               >
-                <IoClose size={24} />
+                <IoClose size={22} />
               </button>
             )}
           </div>
         )}
         <div className="modal-body">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

@@ -24,17 +24,16 @@ export default function LogFilters({
   const hasFilters = Object.values(filters).some((v) => v !== '')
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
+    <div className="card p-4 mb-6 hover:transform-none">
       <div className="flex flex-wrap gap-4">
-        {/* Action Type */}
-        <div className="flex-1 min-w-[180px]">
-          <label className="block text-xs font-medium text-gray-500 mb-1">
+        <div className="flex-1 min-w-[170px]">
+          <label className="block text-xs font-medium text-ink-500 dark:text-ink-300 mb-1">
             操作类型
           </label>
           <select
             value={filters.actionType}
             onChange={(e) => onFilterChange('actionType', e.target.value)}
-            className="input text-sm"
+            className="input text-xs"
           >
             <option value="">全部操作</option>
             {actionTypes.map((type) => (
@@ -45,15 +44,14 @@ export default function LogFilters({
           </select>
         </div>
 
-        {/* Target Type */}
-        <div className="flex-1 min-w-[180px]">
-          <label className="block text-xs font-medium text-gray-500 mb-1">
+        <div className="flex-1 min-w-[170px]">
+          <label className="block text-xs font-medium text-ink-500 dark:text-ink-300 mb-1">
             目标类型
           </label>
           <select
             value={filters.targetType}
             onChange={(e) => onFilterChange('targetType', e.target.value)}
-            className="input text-sm"
+            className="input text-xs"
           >
             <option value="">全部目标</option>
             {targetTypes.map((type) => (
@@ -64,9 +62,8 @@ export default function LogFilters({
           </select>
         </div>
 
-        {/* Start Date */}
         <div className="flex-1 min-w-[150px]">
-          <label className="block text-xs font-medium text-gray-500 mb-1">
+          <label className="block text-xs font-medium text-ink-500 dark:text-ink-300 mb-1">
             开始日期
           </label>
           <div className="relative">
@@ -74,15 +71,14 @@ export default function LogFilters({
               type="date"
               value={filters.startDate}
               onChange={(e) => onFilterChange('startDate', e.target.value)}
-              className="input text-sm pl-9"
+              className="input text-xs pl-9"
             />
-            <FiCalendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+            <FiCalendar className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-400" size={14} />
           </div>
         </div>
 
-        {/* End Date */}
         <div className="flex-1 min-w-[150px]">
-          <label className="block text-xs font-medium text-gray-500 mb-1">
+          <label className="block text-xs font-medium text-ink-500 dark:text-ink-300 mb-1">
             结束日期
           </label>
           <div className="relative">
@@ -90,21 +86,20 @@ export default function LogFilters({
               type="date"
               value={filters.endDate}
               onChange={(e) => onFilterChange('endDate', e.target.value)}
-              className="input text-sm pl-9"
+              className="input text-xs pl-9"
             />
-            <FiCalendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+            <FiCalendar className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-400" size={14} />
           </div>
         </div>
 
-        {/* Status */}
         <div className="flex-1 min-w-[120px]">
-          <label className="block text-xs font-medium text-gray-500 mb-1">
+          <label className="block text-xs font-medium text-ink-500 dark:text-ink-300 mb-1">
             状态
           </label>
           <select
             value={filters.success}
             onChange={(e) => onFilterChange('success', e.target.value)}
-            className="input text-sm"
+            className="input text-xs"
           >
             <option value="">全部</option>
             <option value="true">成功</option>
@@ -112,14 +107,10 @@ export default function LogFilters({
           </select>
         </div>
 
-        {/* Clear Button */}
         {hasFilters && (
           <div className="flex items-end">
-            <button
-              onClick={onClear}
-              className="btn btn-secondary btn-sm h-[42px]"
-            >
-              <FiX size={16} />
+            <button type="button" onClick={onClear} className="btn btn-secondary btn-sm">
+              <FiX size={14} />
               <span>清空</span>
             </button>
           </div>

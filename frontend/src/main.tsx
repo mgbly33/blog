@@ -23,7 +23,19 @@ createRoot(document.getElementById('root')!).render(
         <ErrorBoundary>
           <App />
         </ErrorBoundary>
-        <Toaster position="top-center" />
+        <Toaster
+          position="top-center"
+          toastOptions={{
+            duration: 3500,
+            style: {
+              borderRadius: '12px',
+              padding: '12px 16px',
+              boxShadow: '0 8px 30px rgba(0, 0, 0, 0.12)',
+              fontSize: '14px',
+            },
+          }}
+          containerStyle={{ zIndex: 99999 }}
+        />
       </BrowserRouter>
     </QueryClientProvider>
   </StrictMode>,

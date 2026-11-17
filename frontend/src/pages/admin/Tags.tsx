@@ -24,6 +24,8 @@ export default function Tags() {
     mutationFn: adminApi.createTag,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-tags'] })
+      queryClient.invalidateQueries({ queryKey: ['tags'] })
+      queryClient.invalidateQueries({ queryKey: ['popular-tags'] })
       setIsFormOpen(false)
       toast.success('标签创建成功！')
     },
@@ -38,6 +40,8 @@ export default function Tags() {
       adminApi.updateTag(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-tags'] })
+      queryClient.invalidateQueries({ queryKey: ['tags'] })
+      queryClient.invalidateQueries({ queryKey: ['popular-tags'] })
       setIsFormOpen(false)
       setSelectedTag(null)
       toast.success('标签更新成功！')
@@ -52,6 +56,8 @@ export default function Tags() {
     mutationFn: adminApi.deleteTag,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-tags'] })
+      queryClient.invalidateQueries({ queryKey: ['tags'] })
+      queryClient.invalidateQueries({ queryKey: ['popular-tags'] })
       setIsDeleteOpen(false)
       setSelectedTag(null)
       toast.success('标签删除成功！')
@@ -66,6 +72,8 @@ export default function Tags() {
     mutationFn: adminApi.toggleTagHot,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-tags'] })
+      queryClient.invalidateQueries({ queryKey: ['tags'] })
+      queryClient.invalidateQueries({ queryKey: ['popular-tags'] })
       toast.success('热门状态已更新！')
     },
     onError: (error: any) => {
@@ -113,27 +121,26 @@ export default function Tags() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">标签管理</h1>
-          <p className="text-gray-500">管理文章标签</p>
+          <h1 className="font-editorial-serif text-3xl font-bold text-ink-900 dark:text-ink-50">标签管理</h1>
+          <p className="text-sm text-ink-500 dark:text-ink-400 mt-1">管理文章标签</p>
         </div>
-        <button onClick={handleCreate} className="btn btn-primary">
-          <FiPlus size={18} />
+        <button onClick={handleCreate} className="btn btn-primary btn-sm">
+          <FiPlus size={16} />
           <span>新建标签</span>
         </button>
       </div>
 
       {/* 标签列表 */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+      <div className="card hover:transform-none">
         {isLoading ? (
           <div className="text-center py-8">
-            <div className="animate-spin w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full mx-auto"></div>
-            <p className="mt-4 text-gray-500">加载中...</p>
+            <p className="mt-4 text-sm text-ink-400">加载中...</p>
           </div>
         ) : tags.length === 0 ? (
           <div className="text-center py-12">
-            <FiTag className="mx-auto text-gray-300" size={48} />
-            <p className="mt-4 text-gray-500">暂无标签</p>
-            <button onClick={handleCreate} className="btn btn-primary mt-4">
+            <FiTag className="mx-auto text-ink-300 dark:text-ink-600" size={44} />
+            <p className="mt-4 text-sm text-ink-500 dark:text-ink-400">暂无标签</p>
+            <button onClick={handleCreate} className="btn btn-primary btn-sm mt-4">
               创建第一个标签
             </button>
           </div>
@@ -142,49 +149,49 @@ export default function Tags() {
             {tags.map((tag: Tag) => (
               <div
                 key={tag.id}
-                className="flex items-center justify-between p-4 rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all"
+                className="flex items-center justify-between p-4 rounded-2xl border border-hairline-light dark:border-hairline-dark bg-paper-100/60 dark:bg-white/[0.03] hover:border-vermilion/40 transition-all"
               >
                 <div className="flex items-center gap-3">
                   <span
-                    className="px-3 py-1.5 rounded-full text-white text-sm font-medium"
-                    style={{ backgroundColor: tag.color || '#E8B4B8' }}
+                    className="px-3 py-1 rounded-full text-white text-xs font-medium"
+                    style={{ backgroundColor: tag.color || '#9E6B52' }}
                   >
-                    {tag.name}
+                    #{tag.name}
                   </span>
                   {tag.isHot && (
                     <span className="text-amber-500" title="热门标签">
-                      <FiStar size={16} fill="currentColor" />
+                      <FiStar size={14} fill="currentColor" />
                     </span>
                   )}
                 </div>
                 <div className="flex items-center gap-1">
-                  <span className="text-xs text-gray-400 mr-2">
+                  <span className="text-xs text-ink-400 mr-2">
                     {tag.count || 0} 篇
                   </span>
                   <button
                     onClick={() => handleToggleHot(tag)}
-                    className={`p-2 rounded-lg transition-colors ${
+                    className={`p-2 rounded-xl transition-colors ${
                       tag.isHot
-                        ? 'text-amber-500 hover:bg-amber-50'
-                        : 'text-gray-400 hover:text-amber-500 hover:bg-amber-50'
+                        ? 'text-amber-500 bg-amber-500/10'
+                        : 'text-ink-400 hover:text-amber-500 hover:bg-amber-500/10'
                     }`}
                     title={tag.isHot ? '取消热门' : '设为热门'}
                   >
-                    <FiStar size={16} fill={tag.isHot ? 'currentColor' : 'none'} />
+                    <FiStar size={15} fill={tag.isHot ? 'currentColor' : 'none'} />
                   </button>
                   <button
                     onClick={() => handleEdit(tag)}
-                    className="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                    className="p-2 text-ink-400 hover:text-vermilion hover:bg-vermilion/10 rounded-xl transition-colors"
                     title="编辑"
                   >
-                    <FiEdit2 size={16} />
+                    <FiEdit2 size={15} />
                   </button>
                   <button
                     onClick={() => handleDelete(tag)}
-                    className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    className="p-2 text-ink-400 hover:text-rose-600 hover:bg-rose-500/10 rounded-xl transition-colors"
                     title="删除"
                   >
-                    <FiTrash2 size={16} />
+                    <FiTrash2 size={15} />
                   </button>
                 </div>
               </div>

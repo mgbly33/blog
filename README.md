@@ -1,178 +1,113 @@
-# 🚀 Blog System - Modern Full Stack Platform
+# Blog Forum Platform
 
-<div align="center">
+这是一个基于 **Spring Boot + React** 的前后端分离博客论坛平台，当前实现统一使用 **MySQL + JPA + Redis**，用于展示文章发布、评论互动、后台审核、通知私信与基础安全治理等全栈开发能力。
 
-![Java](https://img.shields.io/badge/Java-17-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)
-![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2-6DB33F?style=for-the-badge&logo=springboot&logoColor=white)
-![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=black)
-![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1?style=for-the-badge&logo=mysql&logoColor=white)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
-![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+## 技术栈
 
-**一个经过深度安全审计与架构重构的现代化博客系统**
+| 层级 | 技术 |
+| --- | --- |
+| 后端 | Java 17, Spring Boot 3.2, Spring Security, Spring Data JPA, Bean Validation, AOP |
+| 前端 | React 18, TypeScript, Vite, Axios, Zustand, React Query |
+| 数据库 | MySQL 8.x, JPA Entity, Repository, 关系型表设计, FULLTEXT 检索索引 |
+| 缓存/中间件 | Redis, Token 黑名单, 接口限流 |
+| 部署 | Docker, Docker Compose, Nginx 反向代理 |
+| CI | GitHub Actions, Maven 测试, ESLint/TypeScript 检查, Docker 镜像构建校验 |
 
-[快速开始](#-快速开始) • [技术架构](#-技术架构) • [安全特性](#-安全特性) • [API 文档](#-api-端点) • [部署指南](#-docker-部署)
+## 核心功能
 
-</div>
+- 用户登录、注册、JWT 刷新、退出登录。
+- 文章发布、编辑、删除、Markdown 渲染、图片上传、草稿保存、版本回滚。
+- 评论、回复、点赞、收藏、关注、通知和私信。
+- 后台审核文章、分类、标签、敏感词、举报、用户和操作日志。
+- 作者、普通用户和管理员的权限控制。
 
----
+## 安全特性
 
-## ✨ 项目亮点
+- `Spring Security + JWT`：Access Token 用于接口访问，Refresh Token 用于续期。
+- `Redis Token 黑名单`：刷新或退出时撤销旧 Token，过滤器拒绝已撤销的 jti。
+- `XSS 过滤`：文章和评论内容进入系统前经过 `OWASP Java HTML Sanitizer` 清洗。
+- `作者/管理员权限校验`：文章、评论、草稿、通知等操作按 `authorId/userId/admin` 判断权限，降低 IDOR 越权风险。
+- `接口限流`：登录、注册、刷新等接口通过 Redis 计数做基础频率限制。
 
-| 亮点 | 说明 |
-|------|------|
-| 🔒 **安全加固** | XSS 防护、IDOR 漏洞修复、统一身份标识 |
-| 🧪 **测试覆盖** | 完整的单元测试套件，覆盖核心业务逻辑 |
-| 🔄 **CI/CD** | GitHub Actions 自动化构建、测试、部署 |
-| 🐳 **容器化** | 多阶段 Docker 构建，生产级 Nginx 配置 |
-| 📚 **文档完善** | Mermaid 架构图、技术总结、API 文档 |
+## 项目结构
 
----
-
-## 🏗️ 技术架构
-
-```mermaid
-graph TB
-    subgraph Client["🌐 客户端"]
-        Browser[浏览器]
-    end
-    
-    subgraph Frontend["📱 前端层"]
-        React[React 18 + TypeScript]
-        Vite[Vite 构建]
-        Zustand[Zustand 状态管理]
-    end
-    
-    subgraph Backend["⚙️ 后端层"]
-        Spring[Spring Boot 3.2]
-        Security[Spring Security]
-        JWT[JWT 认证]
-        Sanitizer[HTML Sanitizer]
-    end
-    
-    subgraph Data["💾 数据层"]
-        MySQL[(MySQL)]
-        Redis[(Redis)]
-    end
-    
-    Browser --> React
-    React --> Spring
-    Spring --> Security
-    Spring --> JWT
-    Spring --> Sanitizer
-    Spring --> MySQL
-    Spring --> Redis
-```
-
-### 技术栈对比
-
-| 层级 | 重构前 (Legacy) | 重构后 (Current) |
-|------|----------------|------------------|
-| **后端** | Node.js + Express | Spring Boot 3.2 |
-| **模板** | EJS 服务端渲染 | React SPA |
-| **认证** | Session Cookie | JWT + Spring Security |
-| **安全** | ❌ 无 XSS 防护 | ✅ OWASP HTML Sanitizer |
-| **测试** | ❌ 无测试 | ✅ JUnit 5 + Mockito |
-| **CI/CD** | ❌ 手动部署 | ✅ GitHub Actions |
-| **容器化** | ❌ 无 | ✅ Docker + Nginx |
-
----
-
-## 🔒 安全特性
-
-### 已解决的安全问题
-
-| 问题 | 风险等级 | 解决方案 |
-|------|---------|----------|
-| XSS 注入 | 🔴 高 | OWASP HTML Sanitizer 消毒所有用户输入 |
-| IDOR 越权访问 | 🔴 高 | 分层权限检查，Repository 强制过滤 |
-| 身份标识混淆 | 🟡 中 | 统一使用 userId，引入 UserPrincipal |
-| API 路由冲突 | 🟡 中 | 规范化 /api 前缀 |
-| 环境变量泄露 | 🟡 中 | 移除硬编码密钥，使用环境变量 |
-
-### 安全实现示例
-
-```java
-// XSS 防护：HTML 内容消毒
-@Component
-public class HtmlSanitizer {
-    public String sanitizeBlogContent(String html) {
-        return BLOG_POLICY.sanitize(html);  // 移除 script、iframe 等危险标签
-    }
-}
-
-// 权限控制：可见性检查
-if (!isAuthor && !isApprovedPublic && !isAdmin) {
-    throw new UnauthorizedException("您无权查看此博客");
-}
-```
-
----
-
-## 📂 项目结构
-
-```
+```text
 blog/
-├── 📁 backend/                  # Spring Boot 后端
-│   ├── src/main/java/com/blog/
-│   │   ├── controller/          # REST API 控制器
-│   │   ├── service/             # 业务逻辑层
-│   │   ├── repository/          # 数据访问层
-│   │   ├── entity/              # 数据模型
-│   │   ├── dto/                 # 数据传输对象
-│   │   ├── security/            # JWT + UserPrincipal
-│   │   ├── util/                # HtmlSanitizer 工具类
-│   │   └── exception/           # 全局异常处理
-│   ├── src/test/java/           # 单元测试
-│   └── Dockerfile               # 后端容器化配置
-│
-├── 📁 frontend/                 # React 前端
-│   ├── src/
-│   │   ├── api/                 # API 客户端
-│   │   ├── components/          # 组件库
-│   │   ├── pages/               # 页面组件
-│   │   ├── store/               # Zustand 状态管理
-│   │   └── types/               # TypeScript 类型
-│   ├── Dockerfile               # 前端容器化配置
-│   └── nginx.conf               # Nginx 配置
-│
-├── 📁 .github/workflows/        # CI/CD 流水线
-│   ├── backend.yml              # 后端 CI/CD
-│   └── frontend.yml             # 前端 CI/CD
-│
-├── 📁 docs/                     # 技术文档
-│   └── 技术总结.md               # 深度审计报告
-│
-└── 📁 docker/                   # Docker Compose 配置
+├── backend/                  # Spring Boot 后端
+│   ├── src/main/java/com/blog
+│   │   ├── controller/        # REST API
+│   │   ├── service/           # 业务逻辑
+│   │   ├── repository/        # JPA Repository
+│   │   ├── entity/            # JPA Entity
+│   │   ├── security/          # JWT、UserPrincipal、过滤器
+│   │   ├── aspect/            # 操作日志、限流切面
+│   │   └── util/              # HTML 清洗、敏感词等工具
+│   └── src/test/java/         # 后端单元测试
+├── frontend/                 # React + TypeScript 前端
+│   ├── src/api/               # Axios API 客户端
+│   ├── src/pages/             # 页面
+│   ├── src/components/        # 通用组件
+│   └── src/stores/            # 前端状态
+├── docker/                   # Dockerfile、Compose、Nginx 配置
+├── docs/                     # 项目文档和技术总结
+├── sql/                      # MySQL 初始化/参考脚本
+└── .github/workflows/         # GitHub Actions
 ```
 
----
+## 本地启动
 
-## 🚀 快速开始
-
-### 前置条件
+### 1. 准备依赖
 
 - Java 17+
+- Maven 3.9+
 - Node.js 20+
-- MySQL 8.0+
-- Redis 7+ (可选)
+- MySQL 8.x
+- Redis 7.x
 
-### 后端启动
+### 2. 初始化 MySQL
+
+创建数据库：
+
+```sql
+CREATE DATABASE IF NOT EXISTS blog CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+后端默认使用 `spring.jpa.hibernate.ddl-auto=update` 自动维护表结构。全文检索索引可参考：
 
 ```bash
 cd backend
+# 应用启动并创建 blogs 表后，再按需执行 schema.sql 中的 FULLTEXT 索引脚本
+```
 
-# 设置环境变量
-export JWT_SECRET="your-secret-key-at-least-32-characters"
-export DB_URL="jdbc:mysql://localhost:3306/blog?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false"
-export DB_USERNAME="root"
-export DB_PASSWORD="your-db-password"
+### 3. 启动后端
 
-# 运行
+PowerShell 示例：
+
+```powershell
+cd backend
+$env:DB_URL="jdbc:mysql://localhost:3306/blog?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false"
+$env:DB_USERNAME="root"
+$env:DB_PASSWORD="your-db-password"
+$env:JWT_SECRET="base64-encoded-secret-at-least-32-bytes"
+$env:REDIS_HOST="localhost"
+$env:REDIS_PORT="6379"
 mvn spring-boot:run
 ```
 
-### 前端启动
+常用后端环境变量：
+
+| 变量 | 说明 |
+| --- | --- |
+| `DB_URL` | MySQL JDBC 地址 |
+| `DB_USERNAME` / `DB_PASSWORD` | MySQL 用户名和密码 |
+| `JWT_SECRET` | JWT 签名密钥，生产环境必须显式设置 |
+| `JWT_EXPIRATION` / `JWT_REFRESH_EXPIRATION` | Access/Refresh Token 过期时间，单位毫秒 |
+| `REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD` | Redis 连接配置 |
+| `CORS_ORIGINS` | 允许访问后端的前端域名 |
+| `ADMIN_USERNAME` / `ADMIN_PASSWORD` / `ADMIN_INIT_ENABLED` | 本地初始化管理员账号，根据实际环境调整 |
+| `UPLOAD_PATH` | 上传文件存储路径 |
+
+### 4. 启动前端
 
 ```bash
 cd frontend
@@ -180,150 +115,65 @@ npm install
 npm run dev
 ```
 
-### 访问地址
+前端 API 地址通过 `VITE_API_URL` 配置。未设置时默认走 `/api`；本地前后端分离启动时可设置为：
+
+```powershell
+$env:VITE_API_URL="http://localhost:8080"
+npm run dev
+```
+
+访问地址：
 
 | 服务 | 地址 |
-|------|------|
-| 前端 | http://localhost:5173 |
-| 后端 API | http://localhost:8080 |
-| Swagger 文档 | http://localhost:8080/swagger-ui.html |
+| --- | --- |
+| 前端 | `http://localhost:5173` |
+| 后端 API | `http://localhost:8080` |
+| Swagger | `http://localhost:8080/swagger-ui.html` |
 
----
+## Docker Compose
 
-## 🐳 Docker 部署
-
-### 快速部署
+开发环境：
 
 ```bash
-# 构建镜像
-docker-compose build
-
-# 启动服务
-docker-compose up -d
+docker compose -f docker/docker-compose.dev.yml up --build
 ```
 
-### docker-compose.yml
+该配置会启动 `frontend`、`backend`、`mysql`、`redis`。生产/部署环境请根据实际服务器修改密码、域名、CORS、上传路径和 JWT 密钥：
 
-```yaml
-version: '3.8'
-services:
-  frontend:
-    build: ./frontend
-    ports:
-      - "80:80"
-    depends_on:
-      - backend
-  
-  backend:
-    build: ./backend
-    environment:
-      - DB_URL=jdbc:mysql://mysql:3306/blog?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
-      - DB_USERNAME=root
-      - DB_PASSWORD=${MYSQL_ROOT_PASSWORD}
-      - JWT_SECRET=${JWT_SECRET}
-    depends_on:
-      - mysql
-      - redis
-  
-  mysql:
-    image: mysql:8.0
-    environment:
-      - MYSQL_DATABASE=blog
-      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
-    volumes:
-      - mysql_data:/var/lib/mysql
-  
-  redis:
-    image: redis:7-alpine
-
-volumes:
-  mysql_data:
+```bash
+docker compose -f docker/docker-compose.yml up --build -d
 ```
 
----
+## 测试与检查
 
-## 📡 API 端点
-
-| 模块 | 端点 | 方法 | 说明 |
-|------|------|------|------|
-| **认证** | `/api/auth/register` | POST | 用户注册 |
-| | `/api/auth/login` | POST | 用户登录 |
-| | `/api/auth/refresh` | POST | 刷新令牌 |
-| **博客** | `/api/blogs` | GET | 获取博客列表 |
-| | `/api/blogs/{id}` | GET | 获取博客详情 |
-| | `/api/blogs` | POST | 创建博客 🔐 |
-| | `/api/blogs/{id}` | PUT | 更新博客 🔐 |
-| | `/api/blogs/{id}` | DELETE | 删除博客 🔐 |
-| **评论** | `/api/comments/blog/{blogId}` | GET | 获取博客评论 |
-| | `/api/comments` | POST | 发表评论 🔐 |
-| **用户** | `/api/users/{id}` | GET | 获取用户资料 |
-| | `/api/users/profile` | PUT | 更新个人资料 🔐 |
-| | `/api/users/{id}/follow` | POST | 关注用户 🔐 |
-
-> 🔐 表示需要 JWT 认证
-
----
-
-## 🧪 测试
-
-### 运行单元测试
+后端测试：
 
 ```bash
 cd backend
 mvn test
 ```
 
-### 测试覆盖模块
+前端检查和构建：
 
-- ✅ **BlogServiceTest** - 博客创建、可见性权限、XSS 消毒
-- ✅ **AuthServiceTest** - 注册、登录、令牌刷新
-- ✅ **CommentServiceTest** - 评论创建、删除权限、通知触发
-- ✅ **UserServiceTest** - 资料管理、密码修改、关注系统
-- ✅ **HtmlSanitizerTest** - XSS 攻击防护验证
-
----
-
-## 📊 CI/CD 流水线
-
-```mermaid
-graph LR
-    A[📝 代码提交] --> B[🔨 编译构建]
-    B --> C[🧪 单元测试]
-    C --> D{✅ 通过?}
-    D -->|是| E[🔍 代码质量检查]
-    E --> F[🐳 Docker 构建]
-    F --> G[📦 发布镜像]
-    D -->|否| H[❌ 通知失败]
+```bash
+cd frontend
+npm run lint
+npm run build
 ```
 
----
+当前测试主要覆盖：认证注册/登录/刷新、文章创建与可见性权限、评论创建与删除权限、用户资料/关注/通知、分类标签服务、HTML Sanitizer 的 XSS 过滤规则。没有在文档中声明无法验证的覆盖率。
 
-## 📚 相关文档
+## 面试亮点
 
-- [深度审计与系统重构技术总结](./docs/技术总结.md)
-- [API 文档 (Swagger)](http://localhost:8080/swagger-ui.html)
-- [快速开始指南](./docs/QUICK_START.md)
+- 完成从早期 Node.js/EJS 单体页面到 Spring Boot REST API + React SPA 的架构重构，前后端职责更清晰。
+- 使用 MySQL + JPA 建模文章、评论、用户、草稿、通知等关系，配合索引和 Repository 查询支撑列表、检索和权限过滤。
+- 用 Spring Security + JWT + Redis 黑名单实现登录、刷新、撤销和接口鉴权闭环。
+- 针对 XSS、IDOR、身份标识混用做了基础安全加固，并有对应服务层校验和工具类支撑。
+- 配置 Docker Compose、Nginx 和 GitHub Actions，具备容器化部署支持和基础 CI 校验。
 
----
+## 相关文档
 
-## 🤝 贡献指南
-
-1. Fork 本仓库
-2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 创建 Pull Request
-
----
-
-## 📄 License
-
-本项目采用 [ISC License](LICENSE) 开源协议。
-
----
-
-<div align="center">
-
-**⭐ 如果这个项目对你有帮助，请给个 Star！**
-
-</div>
+- [技术总结](./docs/技术总结.md)
+- [面试复盘](./INTERVIEW.md)
+- [快速启动](./docs/QUICK_START.md)
+- [变更记录](./CHANGELOG.md)

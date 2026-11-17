@@ -1,33 +1,24 @@
 @echo off
-color 0C
-title Stop Blog System
+title Blog Forum Platform - Dev Stop
 
 echo.
 echo ========================================================
-echo           Stopping All Blog Services
+echo      Blog Forum Platform - Docker Compose Dev Stop
 echo ========================================================
 echo.
 
-echo [1/2] Stopping Node.js servers...
-taskkill /F /IM node.exe >nul 2>&1
-if %errorlevel% equ 0 (
-    echo       OK - Node.js servers stopped
-) else (
-    echo       No running Node.js processes found
+where docker >nul 2>&1
+if %errorlevel% neq 0 (
+    color 0C
+    echo [ERROR] Docker not found. Nothing to stop through this script.
+    echo.
+    pause
+    exit /b 1
 )
 
-echo.
-echo [2/2] Stopping MongoDB...
-taskkill /F /IM mongod.exe >nul 2>&1
-if %errorlevel% equ 0 (
-    echo       OK - MongoDB stopped
-) else (
-    echo       No running MongoDB processes found
-)
+cd /d "%~dp0\.."
+docker compose -f docker\docker-compose.dev.yml down
 
 echo.
-echo ========================================================
-echo              All Services Stopped
-echo ========================================================
-echo.
+echo [INFO] Dev services stopped.
 timeout /t 3 /nobreak >nul

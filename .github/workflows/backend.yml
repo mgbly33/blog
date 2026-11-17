@@ -1,4 +1,4 @@
-name: Blog Backend CI/CD
+name: Blog Backend CI
 
 on:
   push:

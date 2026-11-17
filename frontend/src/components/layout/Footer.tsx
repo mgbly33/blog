@@ -1,87 +1,46 @@
 import { Link } from 'react-router-dom'
-import { FiGithub, FiTwitter, FiMail, FiHeart, FiFeather, FiRss } from 'react-icons/fi'
+import { FiArrowUp, FiRss } from 'react-icons/fi'
 
 export default function Footer() {
   return (
-    <footer className="footer-custom mt-auto py-12">
-      <div className="container mx-auto px-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-          {/* Brand */}
-          <div className="col-span-1 md:col-span-2">
-            <Link to="/" className="navbar-brand mb-4 inline-flex">
-              <FiFeather className="text-xl" />
-              <span>现代博客</span>
-            </Link>
-            <p className="text-gray-600 mt-4 leading-relaxed">
-              一个现代化的博客平台，融合文艺复兴美学与现代设计。
-              基于前后端分离架构构建，支持富文本编辑、草稿自动保存、评论互动等功能。
-            </p>
-          </div>
-
-          {/* Quick Links */}
-          <div>
-            <h3 className="text-lg font-bold mb-4">快速链接</h3>
-            <ul className="space-y-3">
-              <li>
-                <Link to="/" className="text-gray-600 hover:text-primary-600 transition-colors">
-                  首页
-                </Link>
-              </li>
-              <li>
-                <Link to="/search" className="text-gray-600 hover:text-primary-600 transition-colors">
-                  发现
-                </Link>
-              </li>
-              <li>
-                <Link to="/editor" className="text-gray-600 hover:text-primary-600 transition-colors">
-                  写文章
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Social */}
-          <div>
-            <h3 className="text-lg font-bold mb-4">联系我们</h3>
-            <div className="flex gap-4">
-              <a
-                href="#"
-                className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-primary-100 hover:text-primary-600 transition-all"
-              >
-                <FiGithub size={20} />
-              </a>
-              <a
-                href="#"
-                className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-primary-100 hover:text-primary-600 transition-all"
-              >
-                <FiTwitter size={20} />
-              </a>
-              <a
-                href="#"
-                className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-primary-100 hover:text-primary-600 transition-all"
-              >
-                <FiMail size={20} />
-              </a>
-              <a
-                href="/feed/rss"
-                target="_blank"
-                rel="noopener noreferrer"
-                title="订阅更新"
-                className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-orange-100 hover:text-orange-500 transition-all"
-              >
-                <FiRss size={20} />
-              </a>
-            </div>
-          </div>
+    <footer className="relative z-10 w-full max-w-[1480px] mx-auto px-5 sm:px-8 lg:px-12 pt-16 pb-10">
+      <div className="border-t border-hairline-light dark:border-hairline-dark pt-10 flex flex-col md:flex-row items-start md:items-end justify-between gap-8">
+        <div className="space-y-2">
+          <p className="font-editorial-mono text-[10px] uppercase tracking-[0.22em] text-ink-400">
+            MODERN BLOG PLATFORM
+          </p>
+          <h3 className="font-editorial-serif text-3xl sm:text-4xl font-semibold tracking-tight text-ink-800 dark:text-ink-50">
+            现代博客 · 记录思考与技术沉淀
+          </h3>
         </div>
 
-        <div className="border-t border-gray-200 pt-8 text-center">
-          <p className="text-gray-500 flex items-center justify-center gap-1">
-            <span>&copy; {new Date().getFullYear()} 现代博客.</span>
-            <span>由匠心驱动</span>
-            <FiHeart className="text-primary-500" size={14} />
-            <span>现代博客团队</span>
-          </p>
+        <div className="flex flex-wrap items-center gap-6 text-xs text-ink-500 dark:text-ink-400">
+          <Link to="/search" className="editorial-link hover:text-ink-900 dark:hover:text-ink-50">
+            文章检索
+          </Link>
+          <Link to="/series" className="editorial-link hover:text-ink-900 dark:hover:text-ink-50">
+            系列专栏
+          </Link>
+          <Link to="/editor" className="editorial-link hover:text-ink-900 dark:hover:text-ink-50">
+            写文章
+          </Link>
+          <a
+            href="/feed/rss"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 editorial-link hover:text-ink-900 dark:hover:text-ink-50"
+          >
+            <FiRss size={12} className="text-vermilion" />
+            <span>RSS 订阅</span>
+          </a>
+          <button
+            type="button"
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-hairline-light dark:border-hairline-dark hover:border-ink-600 text-ink-700 dark:text-ink-200 transition-colors"
+          >
+            <span>回到顶部</span>
+            <FiArrowUp size={12} />
+          </button>
         </div>
       </div>
     </footer>

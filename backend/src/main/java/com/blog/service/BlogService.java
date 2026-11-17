@@ -154,13 +154,13 @@ public class BlogService {
 
         SensitiveWordFilter.CheckResult checkResult = sensitiveWordService.prePublishCheck(
                 request.getTitle(), request.getContent(), null);
-        if (!checkResult.passed) {
+        if (checkResult != null && !checkResult.passed) {
             String blockedWords = checkResult.matches.stream()
                     .filter(m -> m.level == com.blog.entity.SensitiveWord.Level.BLOCK)
                     .map(m -> m.word)
                     .distinct()
                     .collect(Collectors.joining(", "));
-            throw new IllegalArgumentException("鍐呭鍖呭惈杩濈璇嶏紝璇蜂慨鏀瑰悗閲嶈瘯: " + blockedWords);
+            throw new IllegalArgumentException("内容包含违禁词，请修改后重试: " + blockedWords);
         }
 
         String rawHtml = htmlRenderer.render(markdownParser.parse(request.getContent()));
@@ -203,21 +203,25 @@ public class BlogService {
             throw new UnauthorizedException("无权更新该博客");
         }
 
-        if (request.getTitle() != null) {
-            blog.setTitle(request.getTitle());
-        }
-        if (request.getContent() != null) {
+        if (request.getTitle() != null || request.getContent() != null) {
+            String nextTitle = request.getTitle() != null ? request.getTitle() : blog.getTitle();
+            String nextContent = request.getContent() != null ? request.getContent() : blog.getRawContent();
             SensitiveWordFilter.CheckResult checkResult = sensitiveWordService.prePublishCheck(
-                    request.getTitle(), request.getContent(), null);
-            if (!checkResult.passed) {
+                    nextTitle, nextContent, null);
+            if (checkResult != null && !checkResult.passed) {
                 String blockedWords = checkResult.matches.stream()
                         .filter(m -> m.level == com.blog.entity.SensitiveWord.Level.BLOCK)
                         .map(m -> m.word)
                         .distinct()
                         .collect(Collectors.joining(", "));
-                throw new IllegalArgumentException("鍐呭鍖呭惈杩濈璇嶏紝璇蜂慨鏀瑰悗閲嶈瘯: " + blockedWords);
+                throw new IllegalArgumentException("内容包含违禁词，请修改后重试: " + blockedWords);
             }
+        }
 
+        if (request.getTitle() != null) {
+            blog.setTitle(request.getTitle());
+        }
+        if (request.getContent() != null) {
             String rawHtml = htmlRenderer.render(markdownParser.parse(request.getContent()));
             String htmlContent = htmlSanitizer.sanitizeBlogContent(rawHtml);
             blog.setContent(htmlContent);
@@ -345,7 +349,25 @@ public class BlogService {
     public List<BlogListItem> getStickyBlogs() {
         List<Blog> stickyBlogs = blogRepository.findByIsStickyTrueAndStatusAndVisibilityOrderByCreatedAtDesc(
                 Blog.Status.APPROVED, Blog.Visibility.PUBLIC);
-        return stickyBlogs.stream().map(this::toBlogListItem).collect(Collectors.toList());
+        if (stickyBlogs.isEmpty()) {
+            return List.of();
+        }
+        List<Long> authorIds = stickyBlogs.stream().map(Blog::getAuthorId).distinct().collect(Collectors.toList());
+        Map<Long, User> authorMap = userRepository.findAllById(authorIds).stream()
+                .collect(Collectors.toMap(User::getId, Function.identity()));
+
+        return stickyBlogs.stream().map(blog -> {
+            BlogListItem item = toBlogListItem(blog);
+            User author = authorMap.get(blog.getAuthorId());
+            if (author != null) {
+                item.setAuthor(AuthorInfo.builder()
+                        .id(author.getId())
+                        .username(author.getUsername())
+                        .avatar(author.getAvatar())
+                        .build());
+            }
+            return item;
+        }).collect(Collectors.toList());
     }
 
     private PageDto<BlogListItem> toPageDto(Page<Blog> blogs) {
@@ -496,13 +518,13 @@ public class BlogService {
 
     private void validateScheduleDates(LocalDateTime publishAt, LocalDateTime unpublishAt) {
         if (publishAt != null && publishAt.isBefore(LocalDateTime.now().minusMinutes(1))) {
-            throw new IllegalArgumentException("鍙戝竷鏃堕棿涓嶈兘鏃╀簬褰撳墠鏃堕棿");
+            throw new IllegalArgumentException("发布时间不能早于当前时间");
         }
         if (unpublishAt != null && unpublishAt.isBefore(LocalDateTime.now().minusMinutes(1))) {
-            throw new IllegalArgumentException("涓嬬嚎鏃堕棿涓嶈兘鏃╀簬褰撳墠鏃堕棿");
+            throw new IllegalArgumentException("下线时间不能早于当前时间");
         }
         if (publishAt != null && unpublishAt != null && !unpublishAt.isAfter(publishAt)) {
-            throw new IllegalArgumentException("涓嬬嚎鏃堕棿蹇呴』鏅氫簬鍙戝竷鏃堕棿");
+            throw new IllegalArgumentException("下线时间必须晚于发布时间");
         }
     }
     private LocalDateTime parseScheduleTime(String rawValue) {
@@ -521,7 +543,7 @@ public class BlogService {
         try {
             return LocalDateTime.parse(rawValue);
         } catch (DateTimeParseException ex) {
-            throw new IllegalArgumentException("鏃堕棿鏍煎紡涓嶆纭紝璇蜂娇鐢↖SO8601鏍煎紡");
+            throw new IllegalArgumentException("时间格式不正确，请使用ISO8601格式");
         }
     }
 }

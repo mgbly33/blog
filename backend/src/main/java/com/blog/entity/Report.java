@@ -52,6 +52,7 @@ public class Report {
     @Column(length = 512)
     private String evidenceUrl; // 截图证据
 
+    @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(length = 20)
     private ReportStatus status = ReportStatus.PENDING;
@@ -67,6 +68,5 @@ public class Report {
     @Column(updatable = false)
     private LocalDateTime createdAt;
 
-    @UpdateTimestamp
     private LocalDateTime resolvedAt;
 }

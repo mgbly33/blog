@@ -2,12 +2,23 @@ import { useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-import { FiEdit2, FiCalendar, FiHeart, FiEye, FiSettings, FiUsers, FiClock } from 'react-icons/fi'
+import {
+  FiEdit2,
+  FiCalendar,
+  FiHeart,
+  FiEye,
+  FiSettings,
+  FiClock,
+  FiUserPlus,
+  FiUserCheck,
+  FiMail,
+} from 'react-icons/fi'
 import { userApi } from '@/api/user'
 import { blogApi } from '@/api/blog'
 import { useAuthStore } from '@/stores/authStore'
 import StatsBar from '@/components/profile/StatsBar'
 import StateCard from '@/components/ui/StateCard'
+import EditorialCover from '@/components/editorial/EditorialCover'
 import type { BlogListItem } from '@/types'
 import { REVIEW_STATUS_META } from '@/constants/reviewStatus'
 import dayjs from 'dayjs'
@@ -15,7 +26,7 @@ import dayjs from 'dayjs'
 export default function Profile() {
   const { username } = useParams<{ username: string }>()
   const navigate = useNavigate()
-  const { user: currentUser } = useAuthStore()
+  const { user: currentUser, isAuthenticated, setUser } = useAuthStore()
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState<'posts' | 'likes' | 'bookmarks'>('posts')
   const [isEditing, setIsEditing] = useState(false)
@@ -49,34 +60,28 @@ export default function Profile() {
 
   const updateProfileMutation = useMutation({
     mutationFn: (newBio: string) => userApi.updateProfile({ bio: newBio }),
-    onSuccess: () => {
+    onSuccess: (res) => {
+      if (isOwnProfile && res.data) {
+        setUser(res.data)
+      }
       queryClient.invalidateQueries({ queryKey: ['user', username] })
       setIsEditing(false)
-      toast.success('简介已更新')
+      toast.success('个人简介已更新')
     },
-    onError: () => {
-      toast.error('更新失败')
-    },
+    onError: (err: any) => toast.error(err?.response?.data?.message || '更新失败'),
   })
 
-  const handleSaveBio = () => {
-    updateProfileMutation.mutate(bio)
-  }
+  const followMutation = useMutation({
+    mutationFn: (userId: string) => userApi.toggleFollow(userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user', username] })
+      toast.success('关注状态已更新')
+    },
+    onError: () => toast.error('操作失败'),
+  })
 
   if (userLoading) {
-    return (
-      <div className="max-w-4xl mx-auto">
-        <div className="card animate-pulse">
-          <div className="flex items-center gap-6">
-            <div className="w-24 h-24 bg-gray-200 rounded-full"></div>
-            <div className="flex-1">
-              <div className="h-8 bg-gray-200 rounded w-1/4 mb-2"></div>
-              <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
+    return <StateCard type="loading" title="正在加载作者主页..." />
   }
 
   const profile = userData?.data
@@ -85,150 +90,181 @@ export default function Profile() {
   const bookmarkedBlogs = bookmarkedData?.data?.content || []
 
   if (!profile) {
-    return (
-      <div className="max-w-4xl mx-auto">
-        <StateCard type="empty" title="用户不存在" actionText="返回首页" actionTo="/" />
-      </div>
-    )
+    return <StateCard type="empty" title="未找到该用户主页" actionText="返回博客首页" actionTo="/" />
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="relative mb-6">
-        <div className="absolute inset-0 h-48 rounded-t-2xl bg-gradient-to-br from-primary-400 via-secondary-300 to-accent-gold opacity-80"></div>
-
-        <div className="relative card pt-32 pb-6">
-          <div className="absolute -top-12 left-1/2 -translate-x-1/2 sm:left-8 sm:translate-x-0">
+    <div className="max-w-5xl mx-auto space-y-10">
+      <header className="card p-7 sm:p-10 hover:transform-none">
+        <div className="flex flex-col sm:flex-row items-start justify-between gap-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
             <img
               src={
                 profile.avatar ||
-                `https://ui-avatars.com/api/?name=${profile.username}&size=128&background=E8B4B8&color=fff`
+                `https://ui-avatars.com/api/?name=${profile.username}&size=160&background=9E6B52&color=FAF8F4`
               }
               alt={profile.username}
-              className="w-32 h-32 rounded-full ring-4 ring-white shadow-lg object-cover"
+              className="w-24 h-24 sm:w-28 sm:h-28 rounded-full ring-2 ring-white dark:ring-white/10 object-cover shrink-0"
             />
-          </div>
 
-          {isOwnProfile && (
-            <button
-              onClick={() => navigate('/settings')}
-              className="absolute top-4 right-4 btn btn-secondary btn-sm"
-            >
-              <FiSettings size={16} />
-              <span className="hidden sm:inline">设置</span>
-            </button>
-          )}
-
-          <div className="text-center sm:text-left sm:pl-40">
-            <div className="flex items-center justify-center sm:justify-start gap-3 mb-2">
-              <h1 className="text-2xl font-bold text-gray-800">{profile.username}</h1>
-              {Boolean(profile.isAdmin || profile.role === 'ADMIN') && (
-                <span className="px-2 py-0.5 bg-purple-100 text-purple-600 text-xs rounded-full font-medium">
-                  管理员
+            <div className="space-y-2.5">
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="text-[10px] font-editorial-mono uppercase tracking-[0.2em] text-vermilion font-semibold">
+                  AUTHOR PROFILE
                 </span>
-              )}
-            </div>
-
-            {isEditing ? (
-              <div className="mt-2 max-w-md">
-                <textarea
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                  placeholder="写点个人简介，让大家更了解你..."
-                  className="input min-h-[80px] resize-none text-sm"
-                  maxLength={500}
-                />
-                <div className="flex gap-2 mt-2">
-                  <button
-                    onClick={handleSaveBio}
-                    disabled={updateProfileMutation.isPending}
-                    className="btn btn-primary btn-sm"
-                  >
-                    保存
-                  </button>
-                  <button
-                    onClick={() => setIsEditing(false)}
-                    className="btn btn-secondary btn-sm"
-                  >
-                    取消
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-start gap-2">
-                <p className="text-gray-600 mb-4 max-w-md">
-                  {profile.bio || '这个人很懒，还没有填写个人简介。'}
-                </p>
-                {isOwnProfile && (
-                  <button
-                    onClick={() => {
-                      setBio(profile.bio || '')
-                      setIsEditing(true)
-                    }}
-                    className="text-gray-400 hover:text-primary-500 transition-colors"
-                  >
-                    <FiEdit2 size={14} />
-                  </button>
+                {Boolean(profile.isAdmin || profile.role === 'ADMIN') && (
+                  <span className="badge badge-vermilion">管理员</span>
                 )}
               </div>
-            )}
 
-            <div className="flex items-center justify-center sm:justify-start gap-4 text-sm text-gray-500">
-              <span className="flex items-center gap-1">
-                <FiCalendar size={14} />
-                加入时间 {dayjs(profile.createdAt).format('YYYY-MM-DD')}
-              </span>
-              <span className="flex items-center gap-1">
-                <FiUsers size={14} />
-                {profile.followerCount || 0} 粉丝
-              </span>
+              <h1 className="font-editorial-serif text-3xl sm:text-4xl font-bold text-ink-900 dark:text-ink-50">
+                {profile.username}
+              </h1>
+
+              {isEditing ? (
+                <div className="space-y-2 pt-1 max-w-lg">
+                  <textarea
+                    value={bio}
+                    onChange={(e) => setBio(e.target.value)}
+                    placeholder="介绍一下你的技术方向或写作兴趣（最多 200 字）..."
+                    className="input min-h-[80px] text-sm"
+                    maxLength={200}
+                  />
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-editorial-mono text-ink-400">
+                      {bio.length} / 200
+                    </span>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setIsEditing(false)}
+                        className="btn btn-secondary btn-sm"
+                      >
+                        取消
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateProfileMutation.mutate(bio)}
+                        disabled={updateProfileMutation.isPending}
+                        className="btn btn-primary btn-sm"
+                      >
+                        保存简介
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-start gap-2 max-w-xl">
+                  <p className="text-sm text-ink-600 dark:text-ink-300 leading-relaxed">
+                    {profile.bio || '这位博主很低调，还没有填写个人简介。'}
+                  </p>
+                  {isOwnProfile && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setBio(profile.bio || '')
+                        setIsEditing(true)
+                      }}
+                      className="p-1 text-ink-400 hover:text-vermilion shrink-0"
+                      title="编辑个人简介"
+                    >
+                      <FiEdit2 size={13} />
+                    </button>
+                  )}
+                </div>
+              )}
+
+              <div className="flex items-center gap-4 text-xs text-ink-400 pt-1">
+                <span className="inline-flex items-center gap-1.5">
+                  <FiCalendar size={12} />
+                  <span>加入于 {dayjs(profile.createdAt).format('YYYY年MM月')}</span>
+                </span>
+              </div>
             </div>
           </div>
+
+          <div className="flex items-center gap-2.5 self-start">
+            {isOwnProfile ? (
+              <button
+                type="button"
+                onClick={() => navigate('/settings')}
+                className="btn btn-secondary btn-sm"
+              >
+                <FiSettings size={13} />
+                <span>账号设置</span>
+              </button>
+            ) : (
+              isAuthenticated && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => followMutation.mutate(profile.id)}
+                    disabled={followMutation.isPending}
+                    className={
+                      profile.isFollowing ? 'btn btn-secondary btn-sm' : 'btn btn-primary btn-sm'
+                    }
+                  >
+                    {profile.isFollowing ? <FiUserCheck size={13} /> : <FiUserPlus size={13} />}
+                    <span>{profile.isFollowing ? '已关注' : '关注作者'}</span>
+                  </button>
+                  <Link
+                    to={`/messages?to=${profile.id}`}
+                    className="btn btn-secondary btn-sm"
+                    title="发送私信"
+                  >
+                    <FiMail size={13} />
+                    <span>发私信</span>
+                  </Link>
+                </>
+              )
+            )}
+          </div>
         </div>
-      </div>
+      </header>
 
-      <div className="mb-6">
-        <StatsBar
-          blogCount={profile.blogCount || 0}
-          receivedLikeCount={profile.receivedLikeCount || profile.likeCount || 0}
-          likedCount={profile.likedCount || 0}
-          bookmarkCount={profile.bookmarksCount || profile.bookmarkCount || 0}
-          followerCount={profile.followerCount || 0}
-        />
-      </div>
+      <StatsBar
+        blogCount={profile.blogCount || blogs.length || 0}
+        receivedLikeCount={profile.receivedLikeCount || profile.likeCount || 0}
+        likedCount={profile.likedCount || 0}
+        bookmarkCount={profile.bookmarksCount || profile.bookmarkCount || 0}
+        followerCount={profile.followerCount || 0}
+      />
 
-      <div className="flex gap-4 mb-6 border-b">
+      <div className="border-b border-hairline-light dark:border-hairline-dark flex items-center gap-8 text-sm">
         <button
+          type="button"
           onClick={() => setActiveTab('posts')}
-          className={`pb-3 px-1 text-sm font-medium transition-colors ${
+          className={`pb-3 border-b-2 transition-colors ${
             activeTab === 'posts'
-              ? 'text-primary-600 border-b-2 border-primary-600'
-              : 'text-gray-500 hover:text-gray-700'
+              ? 'border-vermilion text-ink-900 dark:text-ink-50 font-semibold'
+              : 'border-transparent text-ink-400 hover:text-ink-800 dark:hover:text-ink-200'
           }`}
         >
-          文章
+          发布的文章
         </button>
         {isOwnProfile && (
           <>
             <button
+              type="button"
               onClick={() => setActiveTab('likes')}
-              className={`pb-3 px-1 text-sm font-medium transition-colors ${
+              className={`pb-3 border-b-2 transition-colors ${
                 activeTab === 'likes'
-                  ? 'text-primary-600 border-b-2 border-primary-600'
-                  : 'text-gray-500 hover:text-gray-700'
+                  ? 'border-vermilion text-ink-900 dark:text-ink-50 font-semibold'
+                  : 'border-transparent text-ink-400 hover:text-ink-800 dark:hover:text-ink-200'
               }`}
             >
-              我点赞 ({profile.likedCount || likedBlogs.length || 0})
+              点赞的文章
             </button>
             <button
+              type="button"
               onClick={() => setActiveTab('bookmarks')}
-              className={`pb-3 px-1 text-sm font-medium transition-colors ${
+              className={`pb-3 border-b-2 transition-colors ${
                 activeTab === 'bookmarks'
-                  ? 'text-primary-600 border-b-2 border-primary-600'
-                  : 'text-gray-500 hover:text-gray-700'
+                  ? 'border-vermilion text-ink-900 dark:text-ink-50 font-semibold'
+                  : 'border-transparent text-ink-400 hover:text-ink-800 dark:hover:text-ink-200'
               }`}
             >
-              收藏
+              收藏夹
             </button>
           </>
         )}
@@ -237,25 +273,18 @@ export default function Profile() {
       {activeTab === 'posts' && (
         <div>
           {blogsLoading ? (
-            <div className="space-y-4">
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className="card animate-pulse">
-                  <div className="h-6 bg-gray-200 rounded w-3/4 mb-2"></div>
-                  <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                </div>
-              ))}
-            </div>
+            <StateCard type="loading" title="正在加载文章列表..." />
           ) : blogs.length === 0 ? (
             <StateCard
               type="empty"
-              title="还没有发布文章"
-              actionText={isOwnProfile ? '去写第一篇文章' : undefined}
+              title="尚未发布公开文章"
+              actionText={isOwnProfile ? '写第一篇文章' : undefined}
               actionTo={isOwnProfile ? '/editor' : undefined}
             />
           ) : (
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-7">
               {blogs.map((blog: BlogListItem) => (
-                <BlogCard key={blog.id} blog={blog} showStatus={isOwnProfile} />
+                <FolioBlogCard key={blog.id} blog={blog} showStatus={isOwnProfile} />
               ))}
             </div>
           )}
@@ -265,20 +294,13 @@ export default function Profile() {
       {activeTab === 'likes' && isOwnProfile && (
         <div>
           {likedLoading ? (
-            <div className="space-y-4">
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className="card animate-pulse">
-                  <div className="h-6 bg-gray-200 rounded w-3/4 mb-2"></div>
-                  <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                </div>
-              ))}
-            </div>
+            <StateCard type="loading" title="正在加载点赞文章..." />
           ) : likedBlogs.length === 0 ? (
-            <StateCard type="empty" title="你还没有点赞过文章" />
+            <StateCard type="empty" title="还没有点赞过文章" />
           ) : (
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-7">
               {likedBlogs.map((blog: BlogListItem) => (
-                <BlogCard key={blog.id} blog={blog} />
+                <FolioBlogCard key={blog.id} blog={blog} />
               ))}
             </div>
           )}
@@ -288,20 +310,13 @@ export default function Profile() {
       {activeTab === 'bookmarks' && isOwnProfile && (
         <div>
           {bookmarkedLoading ? (
-            <div className="space-y-4">
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className="card animate-pulse">
-                  <div className="h-6 bg-gray-200 rounded w-3/4 mb-2"></div>
-                  <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                </div>
-              ))}
-            </div>
+            <StateCard type="loading" title="正在加载收藏夹..." />
           ) : bookmarkedBlogs.length === 0 ? (
-            <StateCard type="empty" title="你还没有收藏文章" />
+            <StateCard type="empty" title="收藏夹内暂无文章" />
           ) : (
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-7">
               {bookmarkedBlogs.map((blog: BlogListItem) => (
-                <BlogCard key={blog.id} blog={blog} />
+                <FolioBlogCard key={blog.id} blog={blog} />
               ))}
             </div>
           )}
@@ -311,36 +326,62 @@ export default function Profile() {
   )
 }
 
-function BlogCard({ blog, showStatus = false }: { blog: BlogListItem; showStatus?: boolean }) {
+function FolioBlogCard({ blog, showStatus = false }: { blog: BlogListItem; showStatus?: boolean }) {
   const statusMeta = REVIEW_STATUS_META[blog.status as keyof typeof REVIEW_STATUS_META]
 
   return (
-    <article className="card hover:shadow-lg transition-shadow">
-      <div className="mb-2 flex items-start justify-between gap-3">
-        <h3 className="text-lg font-bold text-gray-800 hover:text-primary-600">
-          <Link to={`/blog/${blog.id}`}>{blog.title}</Link>
-        </h3>
-        {showStatus && statusMeta && (
-          <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${statusMeta.badgeClass}`}>
-            {statusMeta.label}
-          </span>
-        )}
+    <article className="card p-0 overflow-hidden flex flex-col justify-between group">
+      <div>
+        <Link to={`/blog/${blog.id}`} className="block">
+          <EditorialCover
+            src={blog.image}
+            title={blog.title}
+            seed={blog.id}
+            category={blog.category || '博客文章'}
+            aspectClass="aspect-[16/9]"
+            roundedClass="rounded-none"
+            className="border-0 border-b"
+            cursorLabel="阅读全文"
+          />
+        </Link>
+
+        <div className="p-5 space-y-2.5">
+          <div className="flex items-center justify-between gap-2 text-xs text-ink-400">
+            <span>{dayjs(blog.createdAt).format('YYYY-MM-DD')}</span>
+            {showStatus && statusMeta && (
+              <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${statusMeta.badgeClass}`}>
+                {statusMeta.label}
+              </span>
+            )}
+          </div>
+
+          <Link to={`/blog/${blog.id}`} className="block">
+            <h3 className="font-editorial-serif text-xl font-bold text-ink-900 dark:text-ink-50 line-clamp-2">
+              <span className="editorial-link">{blog.title}</span>
+            </h3>
+          </Link>
+
+          {blog.summary && (
+            <p className="text-xs sm:text-sm text-ink-500 dark:text-ink-400 line-clamp-2">
+              {blog.summary}
+            </p>
+          )}
+        </div>
       </div>
-      <p className="text-gray-600 text-sm mb-3 line-clamp-2">{blog.summary}</p>
-      <div className="flex items-center gap-4 text-sm text-gray-500">
-        <span className="flex items-center gap-1">
-          <FiEye size={14} />
-          {blog.views}
-        </span>
-        <span className="flex items-center gap-1">
-          <FiHeart size={14} />
-          {blog.likesCount}
-        </span>
-        <span>{dayjs(blog.createdAt).format('YYYY-MM-DD')}</span>
+
+      <div className="px-5 py-3 border-t border-hairline-light dark:border-hairline-dark flex items-center justify-between text-xs text-ink-400">
+        <div className="flex items-center gap-4">
+          <span className="inline-flex items-center gap-1">
+            <FiEye size={12} /> {blog.views || 0}
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <FiHeart size={12} /> {blog.likesCount || 0}
+          </span>
+        </div>
         {showStatus && blog.status === 'SCHEDULED' && blog.publishAt && (
-          <span className="inline-flex items-center gap-1 text-blue-600">
-            <FiClock size={13} />
-            {dayjs(blog.publishAt).format('MM-DD HH:mm')} 定时发布
+          <span className="inline-flex items-center gap-1 text-vermilion text-[11px]">
+            <FiClock size={11} />
+            {dayjs(blog.publishAt).format('MM-DD HH:mm')}
           </span>
         )}
       </div>

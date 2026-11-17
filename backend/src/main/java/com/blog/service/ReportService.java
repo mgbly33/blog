@@ -99,6 +99,7 @@ public class ReportService {
 
         report.setStatus(status);
         report.setAdminReply(adminReply);
+        report.setResolvedAt(java.time.LocalDateTime.now());
         Report updated = reportRepository.save(report);
         return toReportMap(updated);
     }

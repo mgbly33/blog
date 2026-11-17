@@ -43,19 +43,29 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     return;
                 }
 
-                // 检查 token 是否已被撤销
+                // 检查 token 是否已被撤销（Redis 异常时优雅降级）
                 String jti = tokenProvider.extractJti(jwt);
-                if (jti != null && Boolean.TRUE.equals(
-                        redisTemplate.hasKey(TOKEN_BLACKLIST_PREFIX + jti))) {
-                    log.warn("拒绝已撤销的 Token");
-                    filterChain.doFilter(request, response);
-                    return;
+                if (jti != null) {
+                    try {
+                        if (Boolean.TRUE.equals(redisTemplate.hasKey(TOKEN_BLACKLIST_PREFIX + jti))) {
+                            log.warn("拒绝已撤销的 Token");
+                            filterChain.doFilter(request, response);
+                            return;
+                        }
+                    } catch (Exception redisEx) {
+                        log.warn("Redis 黑名单查询不可用，跳过吊销检查: {}", redisEx.getMessage());
+                    }
                 }
 
                 Long userId = tokenProvider.getUserIdFromToken(jwt);
 
-                // 使用用户ID加载用户详情
+                // 使用用户ID加载用户详情并校验账号启用与封禁状态
                 UserDetails userDetails = userDetailsService.loadUserById(userId);
+                if (!userDetails.isEnabled() || !userDetails.isAccountNonLocked()) {
+                    log.warn("拒绝被封禁或禁用账号的 Token, userId={}", userId);
+                    filterChain.doFilter(request, response);
+                    return;
+                }
 
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                         userDetails,

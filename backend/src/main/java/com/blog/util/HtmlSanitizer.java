@@ -4,6 +4,9 @@ import org.owasp.html.HtmlPolicyBuilder;
 import org.owasp.html.PolicyFactory;
 import org.springframework.stereotype.Component;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 /**
  * HTML消毒工具类，防止存储型XSS攻击。
  * 使用OWASP Java HTML Sanitizer库安全地过滤用户输入的HTML内容。
@@ -104,6 +107,37 @@ public class HtmlSanitizer {
      * @param html 原始HTML内容
      * @return 安全的HTML内容
      */
+    private static final Pattern NUMERIC_ENTITY_PATTERN = Pattern.compile("&#(x?[0-9a-fA-F]+);");
+
+    /**
+     * 解码非 ASCII 字符的数值实体（例如中文全角标点 &#xff1f; -> ？），
+     * 同时完整保留 ASCII 范围 (<, >, &, ", ') 的 HTML 实体转义以防止 XSS。
+     */
+    private String decodeNonAsciiEntities(String sanitized) {
+        if (sanitized == null || sanitized.indexOf("&#") < 0) {
+            return sanitized;
+        }
+        Matcher matcher = NUMERIC_ENTITY_PATTERN.matcher(sanitized);
+        StringBuilder sb = new StringBuilder();
+        while (matcher.find()) {
+            String raw = matcher.group(1);
+            try {
+                int codePoint = (raw.startsWith("x") || raw.startsWith("X"))
+                        ? Integer.parseInt(raw.substring(1), 16)
+                        : Integer.parseInt(raw, 10);
+                if (codePoint >= 0x80 && Character.isValidCodePoint(codePoint)) {
+                    matcher.appendReplacement(sb, Matcher.quoteReplacement(new String(Character.toChars(codePoint))));
+                    continue;
+                }
+            } catch (NumberFormatException ignored) {
+                // keep original entity
+            }
+            matcher.appendReplacement(sb, Matcher.quoteReplacement(matcher.group(0)));
+        }
+        matcher.appendTail(sb);
+        return sb.toString();
+    }
+
     public String sanitizeComment(String html) {
         if (html == null) {
             return "";
@@ -111,7 +145,7 @@ public class HtmlSanitizer {
         if (html.trim().isEmpty()) {
             return "";
         }
-        return COMMENT_POLICY.sanitize(html);
+        return decodeNonAsciiEntities(COMMENT_POLICY.sanitize(html));
     }
 
     /**
@@ -127,6 +161,6 @@ public class HtmlSanitizer {
         if (html.trim().isEmpty()) {
             return "";
         }
-        return PLAIN_TEXT_POLICY.sanitize(html);
+        return decodeNonAsciiEntities(PLAIN_TEXT_POLICY.sanitize(html));
     }
 }

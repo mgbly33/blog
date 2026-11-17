@@ -6,7 +6,7 @@ spring:
   profiles:
     default: dev
 
-  # MySQL Configuration (替换 MongoDB)
+  # MySQL Configuration
   datasource:
     url: ${DB_URL}
     username: ${DB_USERNAME}

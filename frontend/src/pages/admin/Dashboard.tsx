@@ -1,27 +1,48 @@
 import { useQuery } from '@tanstack/react-query'
-import { FiUsers, FiFileText, FiMessageSquare, FiClock, FiAlertCircle, FiEye } from 'react-icons/fi'
+import {
+  FiUsers,
+  FiFileText,
+  FiMessageSquare,
+  FiClock,
+  FiAlertCircle,
+  FiEye,
+  FiArrowUpRight,
+} from 'react-icons/fi'
 import { adminApi, DashboardStats } from '@/api/admin'
 import { Link } from 'react-router-dom'
+import StateCard from '@/components/ui/StateCard'
 
 interface StatCardProps {
   title: string
+  en: string
   value: number
   icon: React.ElementType
-  color: string
+  highlight?: boolean
   link?: string
 }
 
-function StatCard({ title, value, icon: Icon, color, link }: StatCardProps) {
+function StatCard({ title, en, value, icon: Icon, highlight, link }: StatCardProps) {
   const content = (
-    <div className={`bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow`}>
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm text-gray-500 mb-1">{title}</p>
-          <p className="text-3xl font-bold text-gray-800">{value.toLocaleString()}</p>
-        </div>
-        <div className={`p-3 rounded-xl ${color}`}>
-          <Icon size={24} className="text-white" />
-        </div>
+    <div
+      className={`card p-6 group ${
+        highlight ? 'border-l-4 border-l-vermilion' : ''
+      }`}
+    >
+      <div className="flex items-center justify-between text-[10px] font-editorial-mono uppercase tracking-[0.18em] text-ink-400 mb-3">
+        <span>{en}</span>
+        <Icon size={15} className={highlight ? 'text-vermilion' : 'text-ink-400'} />
+      </div>
+      <p className="font-editorial-serif text-4xl font-bold text-ink-900 dark:text-ink-50">
+        {value.toLocaleString()}
+      </p>
+      <div className="mt-2 flex items-center justify-between text-xs text-ink-500 dark:text-ink-300">
+        <span>{title}</span>
+        {link && (
+          <FiArrowUpRight
+            size={13}
+            className="opacity-0 group-hover:opacity-100 text-vermilion transition-opacity"
+          />
+        )}
       </div>
     </div>
   )
@@ -39,118 +60,112 @@ export default function Dashboard() {
       const response = await adminApi.getDashboardStats()
       return response.data
     },
-    refetchInterval: 5000, // Auto refresh every 5 seconds
-    refetchIntervalInBackground: true, // Continue refreshing even when tab is not focused
+    refetchInterval: 5000,
+    refetchIntervalInBackground: true,
   })
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
-      </div>
-    )
+    return <StateCard type="loading" title="正在加载运营数据概览..." />
   }
 
   if (error) {
-    return (
-      <div className="bg-red-50 text-red-600 p-4 rounded-lg">
-        加载失败，请刷新页面重试
-      </div>
-    )
+    return <StateCard type="error" title="无法读取仪表盘数据" description="请刷新页面重试" />
   }
 
   const stats = data as DashboardStats
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-800">仪表盘</h1>
-        <p className="text-gray-500 mt-1">欢迎回来，这是系统概览</p>
-      </div>
+    <div className="space-y-8">
+      <header className="border-b border-hairline-light dark:border-hairline-dark pb-5 flex items-end justify-between">
+        <div>
+          <p className="text-[10px] font-editorial-mono uppercase tracking-[0.22em] text-vermilion font-semibold">
+            DASHBOARD OVERVIEW
+          </p>
+          <h1 className="font-editorial-serif text-3xl font-bold text-ink-900 dark:text-ink-50 mt-0.5">
+            平台数据概览
+          </h1>
+        </div>
+      </header>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         <StatCard
-          title="总用户数"
+          title="注册用户总数"
+          en="TOTAL USERS"
           value={stats.totalUsers}
           icon={FiUsers}
-          color="bg-blue-500"
           link="/admin/users"
         />
         <StatCard
-          title="总文章数"
+          title="博客文章总数"
+          en="TOTAL POSTS"
           value={stats.totalBlogs}
           icon={FiFileText}
-          color="bg-green-500"
           link="/admin/blogs"
         />
         <StatCard
-          title="总评论数"
-          value={stats.totalComments}
-          icon={FiMessageSquare}
-          color="bg-purple-500"
-        />
-        <StatCard
           title="待审核文章"
+          en="PENDING REVIEW"
           value={stats.pendingBlogs}
           icon={FiClock}
-          color="bg-yellow-500"
+          highlight={stats.pendingBlogs > 0}
           link="/admin/blogs?status=PENDING"
         />
         <StatCard
-          title="已封禁用户"
-          value={stats.bannedUsers}
-          icon={FiAlertCircle}
-          color="bg-red-500"
-          link="/admin/users?banned=true"
+          title="互动评论总数"
+          en="COMMENTS"
+          value={stats.totalComments}
+          icon={FiMessageSquare}
         />
         <StatCard
-          title="今日浏览"
+          title="今日浏览量"
+          en="TODAY VIEWS"
           value={stats.todayViews}
           icon={FiEye}
-          color="bg-indigo-500"
+        />
+        <StatCard
+          title="已封禁账号"
+          en="BANNED USERS"
+          value={stats.bannedUsers}
+          icon={FiAlertCircle}
+          link="/admin/users"
         />
       </div>
 
-      {/* Quick Actions */}
-      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-        <h2 className="text-lg font-semibold text-gray-800 mb-4">快捷操作</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <section className="card space-y-4 hover:transform-none">
+        <h2 className="text-xs font-semibold uppercase tracking-widest text-ink-600 dark:text-ink-200 pb-2.5 border-b border-hairline-light dark:border-hairline-dark">
+          常用快捷入口
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 text-xs">
           <Link
             to="/admin/blogs?status=PENDING"
-            className="flex items-center gap-3 p-4 rounded-lg bg-yellow-50 text-yellow-700 hover:bg-yellow-100 transition-colors"
+            className="p-4 rounded-2xl border border-hairline-light dark:border-hairline-dark hover:border-vermilion flex items-center justify-between transition-colors"
           >
-            <FiClock size={20} />
-            <span>审核待处理文章</span>
-            {stats.pendingBlogs > 0 && (
-              <span className="ml-auto bg-yellow-500 text-white text-xs px-2 py-1 rounded-full">
-                {stats.pendingBlogs}
-              </span>
-            )}
-          </Link>
-          <Link
-            to="/admin/users"
-            className="flex items-center gap-3 p-4 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
-          >
-            <FiUsers size={20} />
-            <span>管理用户</span>
+            <span className="font-medium text-ink-800 dark:text-ink-100">审核待发布文章</span>
+            <span className="badge badge-vermilion">{stats.pendingBlogs}</span>
           </Link>
           <Link
             to="/admin/blogs"
-            className="flex items-center gap-3 p-4 rounded-lg bg-green-50 text-green-700 hover:bg-green-100 transition-colors"
+            className="p-4 rounded-2xl border border-hairline-light dark:border-hairline-dark hover:border-vermilion flex items-center justify-between transition-colors"
           >
-            <FiFileText size={20} />
-            <span>管理文章</span>
+            <span className="font-medium text-ink-800 dark:text-ink-100">管理全部文章</span>
+            <FiArrowUpRight size={14} />
+          </Link>
+          <Link
+            to="/admin/users"
+            className="p-4 rounded-2xl border border-hairline-light dark:border-hairline-dark hover:border-vermilion flex items-center justify-between transition-colors"
+          >
+            <span className="font-medium text-ink-800 dark:text-ink-100">管理注册用户</span>
+            <FiArrowUpRight size={14} />
           </Link>
           <Link
             to="/"
-            className="flex items-center gap-3 p-4 rounded-lg bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors"
+            className="p-4 rounded-2xl border border-hairline-light dark:border-hairline-dark hover:border-vermilion flex items-center justify-between transition-colors"
           >
-            <FiEye size={20} />
-            <span>查看前台</span>
+            <span className="font-medium text-ink-800 dark:text-ink-100">前往博客首页</span>
+            <FiArrowUpRight size={14} />
           </Link>
         </div>
-      </div>
+      </section>
     </div>
   )
 }

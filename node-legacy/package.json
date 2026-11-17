@@ -1,7 +1,7 @@
 {
   "name": "blog-project",
   "version": "1.0.0",
-  "description": "A simple blog project using Node.js, Express, and MongoDB",
+  "description": "Legacy Node.js implementation kept for architecture comparison",
   "main": "dist/app.js",
   "scripts": {
     "start": "node dist/app.js",

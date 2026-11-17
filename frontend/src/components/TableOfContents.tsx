@@ -1,4 +1,4 @@
-import { FiList } from 'react-icons/fi'
+import { motion } from 'framer-motion'
 
 interface TocItem {
   id: string
@@ -9,41 +9,61 @@ interface TocItem {
 interface TableOfContentsProps {
   toc: TocItem[]
   activeId: string
+  progress?: number
   onClickHeading: (id: string) => void
 }
 
-/**
- * 文章目录侧边栏组件
- */
-export default function TableOfContents({ toc, activeId, onClickHeading }: TableOfContentsProps) {
+export default function TableOfContents({
+  toc,
+  activeId,
+  progress = 0,
+  onClickHeading,
+}: TableOfContentsProps) {
   if (toc.length === 0) return null
 
-  // 找到最小的标题级别作为基准
-  const minLevel = Math.min(...toc.map(item => item.level))
+  const minLevel = Math.min(...toc.map((item) => item.level))
 
   return (
-    <div className="sticky top-24">
-      <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
-        <h3 className="font-bold text-gray-700 mb-3 flex items-center gap-2 text-sm">
-          <FiList size={14} />
-          目录
-        </h3>
-        <nav className="space-y-0.5 max-h-[60vh] overflow-y-auto">
-          {toc.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => onClickHeading(item.id)}
-              className={`block w-full text-left text-sm py-1.5 px-2 rounded-md transition-colors truncate ${
-                activeId === item.id
-                  ? 'text-primary-600 bg-primary-50 font-medium'
-                  : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
-              }`}
-              style={{ paddingLeft: `${(item.level - minLevel) * 12 + 8}px` }}
-              title={item.text}
-            >
-              {item.text}
-            </button>
-          ))}
+    <div className="sticky top-28 select-none">
+      <div className="rounded-3xl bg-[#FAF8F4]/80 dark:bg-[#191817]/85 backdrop-blur-2xl border border-hairline-light dark:border-hairline-dark p-4 shadow-editorial">
+        <div className="flex items-center justify-between mb-3 px-2">
+          <h3 className="text-xs font-semibold text-ink-500 dark:text-ink-300">
+            文章大纲
+          </h3>
+          <span className="px-2 py-0.5 rounded-full bg-vermilion/10 text-vermilion font-editorial-mono text-[10px] font-medium">
+            {Math.round(progress)}%
+          </span>
+        </div>
+
+        <nav className="space-y-0.5 max-h-[62vh] overflow-y-auto no-scrollbar">
+          {toc.map((item) => {
+            const isActive = activeId === item.id
+            const indent = Math.max(0, item.level - minLevel) * 10 + 10
+
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => onClickHeading(item.id)}
+                style={{ paddingLeft: `${indent}px` }}
+                title={item.text}
+                className={`relative block w-full text-left py-1.5 pr-3 rounded-xl text-xs leading-snug truncate transition-colors ${
+                  isActive
+                    ? 'text-vermilion font-semibold'
+                    : 'text-ink-400 hover:text-ink-800 dark:hover:text-ink-100'
+                }`}
+              >
+                {isActive && (
+                  <motion.span
+                    layoutId="toc-active-pill"
+                    transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+                    className="absolute inset-0 rounded-xl bg-vermilion/10 dark:bg-vermilion/15 -z-10"
+                  />
+                )}
+                {item.text}
+              </button>
+            )
+          })}
         </nav>
       </div>
     </div>

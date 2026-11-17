@@ -72,7 +72,7 @@ public class Draft {
     private LocalDateTime lastSavedAt;
 
     @Builder.Default
-    private Integer currentVersion = 1;
+    private Integer currentVersion = 0;
 
     @CreationTimestamp
     @Column(updatable = false)

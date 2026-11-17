@@ -16,7 +16,6 @@ export default function Logs() {
     success: '',
   })
 
-  // Fetch logs
   const { data, isLoading } = useQuery({
     queryKey: ['admin-logs', page, filters],
     queryFn: () =>
@@ -29,19 +28,16 @@ export default function Logs() {
       }),
   })
 
-  // Fetch action types for filter
   const { data: actionTypesData } = useQuery({
     queryKey: ['log-action-types'],
     queryFn: adminApi.getActionTypes,
   })
 
-  // Fetch target types for filter
   const { data: targetTypesData } = useQuery({
     queryKey: ['log-target-types'],
     queryFn: adminApi.getTargetTypes,
   })
 
-  // Fetch statistics
   const { data: statsData } = useQuery({
     queryKey: ['log-statistics'],
     queryFn: adminApi.getLogStatistics,
@@ -71,38 +67,43 @@ export default function Logs() {
   const stats = statsData?.data
 
   return (
-    <div>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">操作日志</h1>
-          <p className="text-gray-500">监控系统操作和用户活动</p>
-        </div>
+    <div className="space-y-6">
+      <div>
+        <h1 className="font-editorial-serif text-3xl font-bold text-ink-900 dark:text-ink-50">
+          操作日志
+        </h1>
+        <p className="text-sm text-ink-500 dark:text-ink-400 mt-1">查看平台关键操作与安全审计记录</p>
       </div>
 
-      {/* Statistics Cards */}
       {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-            <p className="text-sm text-gray-500">总日志数</p>
-            <p className="text-2xl font-bold text-gray-800">{stats.totalLogs.toLocaleString()}</p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="card p-4 hover:transform-none">
+            <p className="text-xs text-ink-400">累计日志数</p>
+            <p className="font-editorial-serif text-3xl font-bold text-ink-900 dark:text-ink-50 mt-1">
+              {stats.totalLogs.toLocaleString()}
+            </p>
           </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-            <p className="text-sm text-gray-500">今日</p>
-            <p className="text-2xl font-bold text-blue-600">{stats.logsToday.toLocaleString()}</p>
+          <div className="card p-4 hover:transform-none">
+            <p className="text-xs text-ink-400">今日新增</p>
+            <p className="font-editorial-serif text-3xl font-bold text-vermilion mt-1">
+              {stats.logsToday.toLocaleString()}
+            </p>
           </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-            <p className="text-sm text-gray-500">失败操作</p>
-            <p className="text-2xl font-bold text-red-600">{stats.failedLogs.toLocaleString()}</p>
+          <div className="card p-4 hover:transform-none">
+            <p className="text-xs text-ink-400">失败操作</p>
+            <p className="font-editorial-serif text-3xl font-bold text-rose-600 dark:text-rose-400 mt-1">
+              {stats.failedLogs.toLocaleString()}
+            </p>
           </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-            <p className="text-sm text-gray-500">登录次数</p>
-            <p className="text-2xl font-bold text-green-600">{stats.loginCount.toLocaleString()}</p>
+          <div className="card p-4 hover:transform-none">
+            <p className="text-xs text-ink-400">登录次数</p>
+            <p className="font-editorial-serif text-3xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">
+              {stats.loginCount.toLocaleString()}
+            </p>
           </div>
         </div>
       )}
 
-      {/* Filters */}
       <LogFilters
         filters={filters}
         onFilterChange={handleFilterChange}
@@ -111,40 +112,39 @@ export default function Logs() {
         targetTypes={targetTypes}
       />
 
-      {/* Logs Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="card p-0 overflow-hidden hover:transform-none">
         {isLoading ? (
-          <div className="p-8 text-center">
-            <div className="animate-spin w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full mx-auto"></div>
-            <p className="mt-4 text-gray-500">加载中...</p>
-          </div>
+          <div className="p-10 text-center text-sm text-ink-400">加载中...</div>
         ) : logs.length === 0 ? (
           <div className="p-12 text-center">
-            <FiActivity className="mx-auto text-gray-300" size={48} />
-            <p className="mt-4 text-gray-500">暂无日志</p>
+            <FiActivity className="mx-auto text-ink-300 dark:text-ink-600" size={44} />
+            <p className="mt-4 text-sm text-ink-500 dark:text-ink-400">暂无日志记录</p>
           </div>
         ) : (
           <>
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-100">
+                <thead className="bg-paper-200/60 dark:bg-white/[0.04] border-b border-hairline-light dark:border-hairline-dark">
                   <tr>
-                    <th className="text-left px-6 py-4 text-sm font-medium text-gray-600">时间</th>
-                    <th className="text-left px-6 py-4 text-sm font-medium text-gray-600">用户</th>
-                    <th className="text-left px-6 py-4 text-sm font-medium text-gray-600">操作</th>
-                    <th className="text-left px-6 py-4 text-sm font-medium text-gray-600">目标</th>
-                    <th className="text-left px-6 py-4 text-sm font-medium text-gray-600">网络地址</th>
-                    <th className="text-center px-6 py-4 text-sm font-medium text-gray-600">状态</th>
+                    <th className="text-left px-6 py-3.5 text-xs font-medium text-ink-500 dark:text-ink-300">时间</th>
+                    <th className="text-left px-6 py-3.5 text-xs font-medium text-ink-500 dark:text-ink-300">操作人</th>
+                    <th className="text-left px-6 py-3.5 text-xs font-medium text-ink-500 dark:text-ink-300">类型</th>
+                    <th className="text-left px-6 py-3.5 text-xs font-medium text-ink-500 dark:text-ink-300">目标</th>
+                    <th className="text-left px-6 py-3.5 text-xs font-medium text-ink-500 dark:text-ink-300">IP 地址</th>
+                    <th className="text-center px-6 py-3.5 text-xs font-medium text-ink-500 dark:text-ink-300">结果</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-hairline-light dark:divide-hairline-dark">
                   {logs.map((log: OperationLog) => (
-                    <tr key={log.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 text-sm text-gray-500">
+                    <tr
+                      key={log.id}
+                      className="hover:bg-paper-200/40 dark:hover:bg-white/[0.03] transition-colors"
+                    >
+                      <td className="px-6 py-4 text-xs text-ink-500 dark:text-ink-400 font-editorial-mono">
                         {dayjs(log.createdAt).format('YYYY-MM-DD HH:mm:ss')}
                       </td>
                       <td className="px-6 py-4">
-                        <span className="font-medium text-gray-800">
+                        <span className="text-xs font-medium text-ink-800 dark:text-ink-100">
                           {log.operatorName || '匿名'}
                         </span>
                       </td>
@@ -153,30 +153,32 @@ export default function Logs() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex flex-col">
-                          <span className="text-sm text-gray-500">{log.targetType}</span>
+                          <span className="text-xs text-ink-600 dark:text-ink-300">
+                            {log.targetType}
+                          </span>
                           {log.targetName && (
-                            <span className="text-xs text-gray-400 truncate max-w-[200px]">
+                            <span className="text-[11px] text-ink-400 truncate max-w-[200px]">
                               {log.targetName}
                             </span>
                           )}
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="text-sm text-gray-500 font-mono">
+                        <span className="text-xs text-ink-400 font-editorial-mono">
                           {log.ipAddress || '-'}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-center">
                         {log.success ? (
-                          <span className="inline-flex items-center text-green-600" title="成功">
-                            <FiCheckCircle size={18} />
+                          <span className="inline-flex items-center text-emerald-600 dark:text-emerald-400" title="成功">
+                            <FiCheckCircle size={16} />
                           </span>
                         ) : (
                           <span
-                            className="inline-flex items-center text-red-600"
+                            className="inline-flex items-center text-rose-600 dark:text-rose-400"
                             title={log.errorMessage || '失败'}
                           >
-                            <FiXCircle size={18} />
+                            <FiXCircle size={16} />
                           </span>
                         )}
                       </td>
@@ -186,28 +188,29 @@ export default function Logs() {
               </table>
             </div>
 
-            {/* Pagination */}
-            <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100">
-              <p className="text-sm text-gray-500">
+            <div className="flex items-center justify-between px-6 py-4 border-t border-hairline-light dark:border-hairline-dark text-xs">
+              <p className="text-ink-400">
                 显示 {page * 20 + 1} - {Math.min((page + 1) * 20, totalElements)} 条，共 {totalElements} 条
               </p>
               <div className="flex items-center gap-2">
                 <button
+                  type="button"
                   onClick={() => setPage(Math.max(0, page - 1))}
                   disabled={page === 0}
-                  className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="p-2 text-ink-400 hover:text-ink-800 dark:hover:text-ink-100 disabled:opacity-40"
                 >
-                  <FiChevronLeft size={20} />
+                  <FiChevronLeft size={18} />
                 </button>
-                <span className="text-sm text-gray-600">
-                  第 {page + 1} 页，共 {totalPages} 页
+                <span className="text-ink-600 dark:text-ink-300">
+                  {page + 1} / {Math.max(1, totalPages)}
                 </span>
                 <button
+                  type="button"
                   onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
                   disabled={page >= totalPages - 1}
-                  className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="p-2 text-ink-400 hover:text-ink-800 dark:hover:text-ink-100 disabled:opacity-40"
                 >
-                  <FiChevronRight size={20} />
+                  <FiChevronRight size={18} />
                 </button>
               </div>
             </div>

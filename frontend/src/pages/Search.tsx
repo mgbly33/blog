@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams, useParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { FiSearch, FiEye, FiHeart, FiMessageCircle } from 'react-icons/fi'
+import { FiSearch, FiEye, FiHeart, FiMessageCircle, FiX, FiArrowUpRight } from 'react-icons/fi'
 import { blogApi } from '@/api/blog'
 import { tagApi, categoryApi } from '@/api/category'
+import EditorialCover from '@/components/editorial/EditorialCover'
 import type { BlogListItem, Tag, Category } from '@/types'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
@@ -20,43 +21,46 @@ export default function Search() {
   const tagId = searchParams.get('tag')
   const categoryId = searchParams.get('category') || routeCategoryId || null
   const [searchInput, setSearchInput] = useState(keyword)
+  const [page, setPage] = useState(0)
 
   useEffect(() => {
     setSearchInput(keyword)
-  }, [keyword])
+    setPage(0)
+  }, [keyword, tagId, categoryId])
 
-  // Search blogs
   const { data: searchData, isLoading } = useQuery({
-    queryKey: ['search', keyword, tagId, categoryId],
+    queryKey: ['search', keyword, tagId, categoryId, page],
     queryFn: () => {
-      if (tagId) {
-        return blogApi.getBlogsByTag(tagId, 0, 20)
-      }
-      if (categoryId) {
-        return blogApi.getBlogsByCategory(categoryId, 0, 20)
-      }
-      if (keyword) {
-        return blogApi.searchBlogs(keyword, 0, 20)
-      }
-      return blogApi.getBlogs(0, 20)
+      if (tagId) return blogApi.getBlogsByTag(tagId, page, 12)
+      if (categoryId) return blogApi.getBlogsByCategory(categoryId, page, 12)
+      if (keyword) return blogApi.searchBlogs(keyword, page, 12)
+      return blogApi.getBlogs(page, 12)
     },
   })
 
-  // Fetch all tags
   const { data: tagsData } = useQuery({
     queryKey: ['tags'],
     queryFn: () => tagApi.getAll(),
   })
 
-  // Fetch all categories
   const { data: categoriesData } = useQuery({
     queryKey: ['categories'],
     queryFn: () => categoryApi.getAll(),
   })
 
-  const blogs = searchData?.data?.content || []
+  const pageData = searchData?.data
+  const blogs = pageData?.content || []
+  const totalElements = pageData?.totalElements ?? blogs.length
   const tags = tagsData?.data || []
   const categories = categoriesData?.data || []
+
+  const categoryMap = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const c of categories) {
+      map.set(String(c.id), c.name)
+    }
+    return map
+  }, [categories])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -81,208 +85,256 @@ export default function Search() {
     navigate('/search')
   }
 
-  const activeTag = tagId ? tags.find((t: Tag) => t.id === tagId) : null
+  const activeTag = tagId ? tags.find((t: Tag) => String(t.id) === String(tagId)) : null
   const activeCategory = categoryId
-    ? categories.find((c: Category) => c.id === categoryId)
+    ? categories.find((c: Category) => String(c.id) === String(categoryId))
     : null
 
+  const headingTitle = keyword
+    ? `“${keyword}” 的搜索结果`
+    : activeTag
+      ? `标签归档 · #${activeTag.name}`
+      : activeCategory
+        ? `文章分类 · ${activeCategory.name}`
+        : '发现与搜索文章'
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-      {/* Main Content */}
-      <div className="lg:col-span-3">
-        {/* Search Bar */}
-        <form onSubmit={handleSearch} className="mb-6">
-          <div className="relative">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
-              <FiSearch size={20} />
-            </span>
-            <input
-              type="text"
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="搜索文章..."
-              className="input pl-12 pr-24 text-lg"
-            />
-            <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 btn btn-primary btn-sm">
-              搜索
-            </button>
-          </div>
-        </form>
-
-        {/* Active Filters */}
-        {(keyword || activeTag || activeCategory) && (
-          <div className="flex items-center gap-2 mb-6">
-            <span className="text-gray-600">当前筛选:</span>
-            {keyword && (
-              <span className="px-3 py-1 bg-primary-100 text-primary-600 rounded-full text-sm">
-                关键词: {keyword}
-              </span>
-            )}
-            {activeTag && (
-              <span
-                className="px-3 py-1 rounded-full text-sm"
-                style={{ backgroundColor: activeTag.color + '20', color: activeTag.color }}
-              >
-                标签：{activeTag.name}
-              </span>
-            )}
-            {activeCategory && (
-              <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm">
-                分类: {activeCategory.name}
-              </span>
-            )}
-            <button
-              onClick={clearFilters}
-              className="text-sm text-gray-500 hover:text-gray-700 ml-2"
-            >
-              清除筛选
-            </button>
-          </div>
-        )}
-
-        {/* Results */}
-        <h2 className="text-xl font-bold text-gray-800 mb-4">
-          {keyword
-            ? `"${keyword}" 的搜索结果`
-            : activeTag
-            ? `标签：${activeTag.name}`
-            : activeCategory
-            ? `分类: ${activeCategory.name}`
-            : '发现文章'}
-          <span className="text-gray-500 font-normal text-base ml-2">
-            ({blogs.length} 篇)
+    <div className="space-y-10">
+      <header className="border-b border-hairline-light dark:border-hairline-dark pb-8 space-y-5">
+        <div className="flex items-center justify-between text-[11px] font-editorial-mono uppercase tracking-[0.2em] text-ink-400">
+          <span className="text-vermilion font-semibold flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-vermilion" />
+            DISCOVER & SEARCH
           </span>
-        </h2>
+          <span>共 {totalElements} 篇文章</span>
+        </div>
 
-        {isLoading ? (
-          <div className="space-y-4">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="card animate-pulse">
-                <div className="h-6 bg-gray-200 rounded w-3/4 mb-4"></div>
-                <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
-                <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-              </div>
-            ))}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-end">
+          <div className="lg:col-span-7">
+            <h1 className="font-editorial-serif text-3xl sm:text-5xl font-bold text-ink-900 dark:text-ink-50 tracking-tight">
+              {headingTitle}
+            </h1>
           </div>
-        ) : blogs.length === 0 ? (
-          <div className="card text-center py-12">
-            <p className="text-gray-500">没有找到相关文章</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {blogs.map((blog: BlogListItem) => (
-              <article key={blog.id} className="card hover:shadow-lg transition-shadow">
-                <div className="flex gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <img
-                        src={
-                          blog.author?.avatar ||
-                          `https://ui-avatars.com/api/?name=${blog.author?.username}`
-                        }
-                        alt={blog.author?.username}
-                        className="w-6 h-6 rounded-full"
-                      />
-                      <Link
-                        to={`/user/${blog.author?.username}`}
-                        className="text-sm text-gray-600 hover:text-primary-600"
-                      >
-                        {blog.author?.username}
-                      </Link>
-                      <span className="text-gray-400">·</span>
-                      <span className="text-sm text-gray-500">
-                        {dayjs(blog.createdAt).fromNow()}
-                      </span>
-                    </div>
 
-                    <h3 className="text-lg font-bold text-gray-800 mb-2 hover:text-primary-600">
-                      <Link to={`/blog/${blog.id}`}>{blog.title}</Link>
-                    </h3>
+          <form onSubmit={handleSearch} className="lg:col-span-5">
+            <div className="relative">
+              <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-400" size={17} />
+              <input
+                type="text"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="输入关键词搜索标题或正文..."
+                className="input pl-10 pr-24 py-3"
+              />
+              <button type="submit" className="btn btn-primary btn-sm absolute right-1.5 top-1/2 -translate-y-1/2">
+                搜索
+              </button>
+            </div>
+          </form>
+        </div>
 
-                    <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-                      {blog.summary}
-                    </p>
-
-                    <div className="flex items-center gap-4 text-sm text-gray-500">
-                      <span className="flex items-center gap-1">
-                        <FiEye size={14} />
-                        {blog.views}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <FiHeart size={14} />
-                        {blog.likesCount}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <FiMessageCircle size={14} />
-                        {blog.commentCount}
-                      </span>
-                    </div>
-                  </div>
-
-                  {blog.image && (
-                    <div className="hidden sm:block w-32 h-24 flex-shrink-0">
-                      <img
-                        src={blog.image}
-                        alt={blog.title}
-                        className="w-full h-full object-cover rounded-lg"
-                      />
-                    </div>
-                  )}
-                </div>
-              </article>
-            ))}
+        {(keyword || activeTag || activeCategory) && (
+          <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
+            <span className="text-ink-400">当前筛选：</span>
+            {keyword && <span className="badge badge-primary">关键词：{keyword}</span>}
+            {activeTag && <span className="badge badge-vermilion">标签：#{activeTag.name}</span>}
+            {activeCategory && <span className="badge badge-primary">分类：{activeCategory.name}</span>}
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="inline-flex items-center gap-1 text-xs text-ink-500 hover:text-vermilion ml-2"
+            >
+              <FiX size={13} />
+              <span>清除筛选</span>
+            </button>
           </div>
         )}
-      </div>
+      </header>
 
-      {/* Sidebar */}
-      <aside className="lg:col-span-1 space-y-6">
-        {/* Categories */}
-        <div className="card">
-          <h3 className="text-lg font-bold text-gray-800 mb-4">分类</h3>
-          <ul className="space-y-2">
-            {categories.map((category: Category) => (
-              <li key={category.id}>
-                <button
-                  onClick={() => handleCategoryClick(category.id)}
-                  className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
-                    categoryId === category.id
-                      ? 'bg-primary-100 text-primary-600'
-                      : 'hover:bg-gray-100 text-gray-700'
-                  }`}
-                >
-                  {category.name}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+        {/* Main Catalogue List (8 Cols) */}
+        <div className="lg:col-span-8 space-y-6">
+          {isLoading ? (
+            <div className="space-y-6 animate-pulse">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="h-36 rounded-2xl bg-paper-200 dark:bg-ink-800" />
+              ))}
+            </div>
+          ) : blogs.length === 0 ? (
+            <div className="card p-14 text-center space-y-3 hover:transform-none">
+              <p className="font-editorial-serif text-2xl text-ink-700 dark:text-ink-200">
+                未找到匹配的博客文章
+              </p>
+              <p className="text-xs text-ink-400">可尝试更换关键词或清除当前筛选条件</p>
+              {(keyword || activeTag || activeCategory) && (
+                <button type="button" onClick={clearFilters} className="btn btn-secondary btn-sm mt-2">
+                  重置筛选条件
                 </button>
-              </li>
-            ))}
-          </ul>
+              )}
+            </div>
+          ) : (
+            <>
+              <div className="divide-y divide-hairline-light dark:divide-hairline-dark border-b border-hairline-light dark:border-hairline-dark">
+                {blogs.map((blog: BlogListItem) => {
+                  const catName =
+                    blog.category ||
+                    (blog.categoryId ? categoryMap.get(String(blog.categoryId)) : null) ||
+                    '博客文章'
+                  return (
+                    <article
+                      key={blog.id}
+                      className="group py-6 first:pt-0 flex flex-col sm:flex-row gap-6 items-start justify-between"
+                    >
+                      <div className="flex-1 min-w-0 space-y-2.5">
+                        <div className="flex items-center gap-2.5 text-xs text-ink-400">
+                          <span className="text-vermilion font-medium">{catName}</span>
+                          <span>·</span>
+                          <span>{dayjs(blog.createdAt).format('YYYY-MM-DD')}</span>
+                          <span>·</span>
+                          <span>约 {blog.readTime || 3} 分钟阅读</span>
+                        </div>
+
+                        <Link to={`/blog/${blog.id}`} className="block" data-cursor="阅读全文">
+                          <h2 className="font-editorial-serif text-2xl font-bold text-ink-900 dark:text-ink-50 leading-snug">
+                            <span className="editorial-link">{blog.title}</span>
+                          </h2>
+                        </Link>
+
+                        {blog.summary && (
+                          <p className="text-xs sm:text-sm text-ink-500 dark:text-ink-400 line-clamp-2 leading-relaxed">
+                            {blog.summary}
+                          </p>
+                        )}
+
+                        <div className="pt-1 flex items-center justify-between text-xs text-ink-400">
+                          <Link
+                            to={`/user/${blog.author?.username}`}
+                            className="font-medium text-ink-700 dark:text-ink-300 hover:text-vermilion"
+                          >
+                            {blog.author?.username}
+                          </Link>
+                          <div className="flex items-center gap-4">
+                            <span className="inline-flex items-center gap-1">
+                              <FiEye size={12} /> {blog.views || 0}
+                            </span>
+                            <span className="inline-flex items-center gap-1">
+                              <FiHeart size={12} /> {blog.likesCount || 0}
+                            </span>
+                            <span className="inline-flex items-center gap-1">
+                              <FiMessageCircle size={12} /> {blog.commentCount || 0}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <Link
+                        to={`/blog/${blog.id}`}
+                        className="w-full sm:w-44 shrink-0"
+                      >
+                        <EditorialCover
+                          src={blog.image}
+                          title={blog.title}
+                          seed={blog.id}
+                          aspectClass="aspect-[16/10]"
+                          compact
+                          cursorLabel="阅读全文"
+                        />
+                      </Link>
+                    </article>
+                  )
+                })}
+              </div>
+
+              {pageData && pageData.totalPages > 1 && (
+                <div className="flex items-center justify-between pt-2 text-xs">
+                  <span className="text-ink-400">
+                    第 {page + 1} / {pageData.totalPages} 页
+                  </span>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPage((p) => Math.max(0, p - 1))}
+                      disabled={!pageData.hasPrevious}
+                      className="btn btn-secondary btn-sm"
+                    >
+                      上一页
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPage((p) => p + 1)}
+                      disabled={!pageData.hasNext}
+                      className="btn btn-secondary btn-sm"
+                    >
+                      下一页
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </div>
 
-        {/* 标签 */}
-        <div className="card">
-          <h3 className="text-lg font-bold text-gray-800 mb-4">标签</h3>
-          <div className="flex flex-wrap gap-2">
-            {tags.map((tag: Tag) => (
-              <button
-                key={tag.id}
-                onClick={() => handleTagClick(tag.id)}
-                className={`px-3 py-1 rounded-full text-sm transition-colors ${
-                  tagId === tag.id
-                    ? 'ring-2 ring-offset-1'
-                    : 'hover:opacity-80'
-                }`}
-                style={{
-                  backgroundColor: tag.color + '20',
-                  color: tag.color,
-                  ...(tagId === tag.id ? { ringColor: tag.color } : {}),
-                }}
-              >
-                {tag.name}
-              </button>
-            ))}
-          </div>
-        </div>
-      </aside>
+        {/* Right Sidebar: Categories & Tags (4 Cols) */}
+        <aside className="lg:col-span-4 space-y-6 lg:sticky lg:top-24 lg:self-start">
+          {categories.length > 0 && (
+            <div className="card space-y-3 hover:transform-none">
+              <h3 className="text-xs font-semibold uppercase tracking-widest text-ink-500 pb-2 border-b border-hairline-light dark:border-hairline-dark">
+                文章分类
+              </h3>
+              <div className="space-y-1">
+                {categories.map((cat: Category) => {
+                  const isActive = String(categoryId) === String(cat.id)
+                  return (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => handleCategoryClick(cat.id)}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-colors ${
+                        isActive
+                          ? 'bg-ink-800 text-paper-50 dark:bg-ink-50 dark:text-ink-900 font-medium'
+                          : 'text-ink-600 dark:text-ink-300 hover:bg-paper-200/70 dark:hover:bg-white/[0.06]'
+                      }`}
+                    >
+                      <span>{cat.name}</span>
+                      <span className="opacity-70 flex items-center gap-1">
+                        <span>{cat.blogCount || 0}</span>
+                        <FiArrowUpRight size={12} />
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {tags.length > 0 && (
+            <div className="card space-y-3 hover:transform-none">
+              <h3 className="text-xs font-semibold uppercase tracking-widest text-ink-500 pb-2 border-b border-hairline-light dark:border-hairline-dark">
+                全部话题标签
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {tags.map((tag: Tag) => {
+                  const isActive = String(tagId) === String(tag.id)
+                  return (
+                    <button
+                      key={tag.id}
+                      type="button"
+                      onClick={() => handleTagClick(tag.id)}
+                      className={`px-3 py-1.5 rounded-full text-xs border transition-colors ${
+                        isActive
+                          ? 'bg-vermilion text-white border-vermilion'
+                          : 'bg-paper-100/70 dark:bg-white/[0.05] border-hairline-light dark:border-hairline-dark text-ink-600 dark:text-ink-300 hover:border-vermilion'
+                      }`}
+                    >
+                      #{tag.name}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+        </aside>
+      </div>
     </div>
   )
 }

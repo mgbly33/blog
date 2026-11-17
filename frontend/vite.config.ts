@@ -11,11 +11,11 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg'],
       manifest: {
-        name: 'Modern Blog',
-        short_name: 'Blog',
-        description: '一个现代化的博客平台',
-        theme_color: '#E8B4B8',
-        background_color: '#FDF8F5',
+        name: '现代博客 · Modern Blog',
+        short_name: '现代博客',
+        description: '一个现代化的博客与深度写作社区',
+        theme_color: '#F4F1EA',
+        background_color: '#F4F1EA',
         display: 'standalone',
         start_url: '/',
         scope: '/',
@@ -29,10 +29,10 @@ export default defineConfig({
         ],
       },
       workbox: {
-        // API 请求：Network First（优先网络，离线用缓存）
+        // 仅缓存公开只读 API 请求，严禁缓存带鉴权的个人私有接口
         runtimeCaching: [
           {
-            urlPattern: /^https?:\/\/.*\/api\/.*/i,
+            urlPattern: /^https?:\/\/.*\/api\/(?:blogs(?!\/liked|\/bookmarks)|categories|tags|series).*$/i,
             handler: 'NetworkFirst',
             options: {
               cacheName: 'api-cache',
@@ -97,8 +97,15 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      // 所有API请求统一代理到后端
       '/api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
+      '/uploads': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
+      '/feed': {
         target: 'http://localhost:8080',
         changeOrigin: true,
       },

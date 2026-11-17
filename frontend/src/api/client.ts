@@ -1,4 +1,4 @@
-﻿import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios'
+import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios'
 import { useAuthStore } from '@/stores/authStore'
 
 const normalizeApiBaseUrl = (rawBaseUrl?: string): string => {
@@ -62,9 +62,18 @@ api.interceptors.response.use(
   },
   async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean }
-    const isRefreshRequest = originalRequest?.url?.includes('/auth/refresh')
+    const isAuthRequest =
+      originalRequest?.url?.includes('/auth/login') ||
+      originalRequest?.url?.includes('/auth/register') ||
+      originalRequest?.url?.includes('/auth/refresh')
 
-    if (error.response?.status === 401 && !originalRequest?._retry && !isRefreshRequest) {
+    if (error.response?.status === 401 && !originalRequest?._retry && !isAuthRequest) {
+      const { isAuthenticated, accessToken, refreshToken } = useAuthStore.getState()
+      // Unauthenticated visitors should NEVER be force-redirected to /login on public pages
+      if (!isAuthenticated && !accessToken && !refreshToken) {
+        return Promise.reject(error)
+      }
+
       if (isRefreshing) {
         return new Promise<string>((resolve, reject) => {
           failedQueue.push({ resolve, reject })
@@ -77,7 +86,6 @@ api.interceptors.response.use(
       originalRequest._retry = true
       isRefreshing = true
 
-      const refreshToken = useAuthStore.getState().refreshToken
       if (refreshToken) {
         try {
           const response = await api.post('/auth/refresh', { refreshToken })
@@ -91,7 +99,9 @@ api.interceptors.response.use(
         } catch (refreshError) {
           processQueue(refreshError as AxiosError, null)
           useAuthStore.getState().logout()
-          window.location.href = '/login'
+          if (window.location.pathname !== '/login') {
+            window.location.href = '/login'
+          }
           return Promise.reject(refreshError)
         } finally {
           isRefreshing = false
@@ -100,7 +110,9 @@ api.interceptors.response.use(
         isRefreshing = false
         processQueue(error, null)
         useAuthStore.getState().logout()
-        window.location.href = '/login'
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login'
+        }
       }
     }
 

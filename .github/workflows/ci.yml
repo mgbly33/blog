@@ -1,35 +1,31 @@
-name: Node.js CI
+name: Project Docs Check
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ main, master, develop ]
+    paths:
+      - 'README.md'
+      - 'INTERVIEW.md'
+      - 'CHANGELOG.md'
+      - 'docs/**'
+      - '.github/workflows/ci.yml'
   pull_request:
-    branches: [ "main" ]
+    branches: [ main, master ]
+    paths:
+      - 'README.md'
+      - 'INTERVIEW.md'
+      - 'CHANGELOG.md'
+      - 'docs/**'
 
 jobs:
-  build:
-
+  docs-check:
     runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        node-version: [18.x, 20.x]
-        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
-
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v3
-      with:
-        node-version: ${{ matrix.node-version }}
-        cache: 'npm'
-
-    - name: Install dependencies
-      run: npm ci --legacy-peer-deps
-
-    - name: Build
-      run: npm run build --if-present
-
-    - name: Run tests
-      run: npm test
+      - name: Check required docs
+        run: |
+          test -f README.md
+          test -f INTERVIEW.md
+          test -f CHANGELOG.md
+          test -f docs/技术总结.md

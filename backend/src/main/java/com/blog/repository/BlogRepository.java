@@ -43,13 +43,18 @@ public interface BlogRepository extends JpaRepository<Blog, Long>, JpaSpecificat
                         Pageable pageable);
 
         /**
-         * Full-text search using MySQL FULLTEXT index
+         * Search public approved blogs across title, summary, raw_content, and content (supports Chinese & short queries)
          */
-        @Query(value = "SELECT * FROM blogs WHERE MATCH(title, content, summary) AGAINST(:query IN NATURAL LANGUAGE MODE) "
-                        +
-                        "AND status = 'APPROVED' AND visibility = 'PUBLIC'", countQuery = "SELECT COUNT(*) FROM blogs WHERE MATCH(title, content, summary) AGAINST(:query IN NATURAL LANGUAGE MODE) "
-                                        +
-                                        "AND status = 'APPROVED' AND visibility = 'PUBLIC'", nativeQuery = true)
+        @Query(value = "SELECT * FROM blogs WHERE status = 'APPROVED' AND visibility = 'PUBLIC' "
+                        + "AND (LOWER(title) LIKE LOWER(CONCAT('%', :query, '%')) "
+                        + "OR LOWER(COALESCE(summary, '')) LIKE LOWER(CONCAT('%', :query, '%')) "
+                        + "OR LOWER(COALESCE(raw_content, content, '')) LIKE LOWER(CONCAT('%', :query, '%'))) "
+                        + "ORDER BY is_sticky DESC, created_at DESC",
+                countQuery = "SELECT COUNT(*) FROM blogs WHERE status = 'APPROVED' AND visibility = 'PUBLIC' "
+                        + "AND (LOWER(title) LIKE LOWER(CONCAT('%', :query, '%')) "
+                        + "OR LOWER(COALESCE(summary, '')) LIKE LOWER(CONCAT('%', :query, '%')) "
+                        + "OR LOWER(COALESCE(raw_content, content, '')) LIKE LOWER(CONCAT('%', :query, '%')))",
+                nativeQuery = true)
         Page<Blog> searchByText(@Param("query") String query, Pageable pageable);
 
         /**
@@ -102,7 +107,13 @@ public interface BlogRepository extends JpaRepository<Blog, Long>, JpaSpecificat
         // 系列文章查询
         List<Blog> findBySeriesIdOrderByChapterOrderAsc(Long seriesId);
 
+        List<Blog> findBySeriesIdAndStatusAndVisibilityOrderByChapterOrderAsc(
+                        Long seriesId, Blog.Status status, Blog.Visibility visibility);
+
         List<Blog> findBySeriesIdInOrderBySeriesIdAscChapterOrderAsc(List<Long> seriesIds);
+
+        List<Blog> findBySeriesIdInAndStatusAndVisibilityOrderBySeriesIdAscChapterOrderAsc(
+                        List<Long> seriesIds, Blog.Status status, Blog.Visibility visibility);
 
         // 数据看板 - 按日期统计新增博客数
         @Query(value = "SELECT DATE(created_at) as date, COUNT(*) as count FROM blogs WHERE created_at >= :since GROUP BY DATE(created_at) ORDER BY date", nativeQuery = true)

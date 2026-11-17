@@ -35,10 +35,10 @@ export default function OfflineIndicator() {
 
   return (
     <div
-      className={`fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg transition-all ${
+      className={`fixed bottom-24 left-1/2 -translate-x-1/2 z-[9992] flex items-center gap-3 px-4 py-2.5 rounded-full shadow-editorial-float transition-all ${
         isOnline
-          ? 'bg-green-500 text-white'
-          : 'bg-gray-800 text-white'
+          ? 'bg-emerald-700 text-white'
+          : 'bg-ink-800 text-paper-50 border border-white/10'
       }`}
     >
       {isOnline ? (

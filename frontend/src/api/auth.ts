@@ -37,7 +37,7 @@ export const authApi = {
 
 export const userApi = {
   getProfile: async (username: string): Promise<ApiResponse<UserProfile>> => {
-    const response = await api.get(`/users/${username}`)
+    const response = await api.get(`/users/username/${encodeURIComponent(username)}`)
     return response.data
   },
 

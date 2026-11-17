@@ -41,6 +41,7 @@ function App() {
         <Route path="user/:username" element={<Profile />} />
         <Route path="tag/:tagId" element={<TagBlogs />} />
         <Route path="category/:categoryId" element={<Search />} />
+        <Route path="series" element={<SeriesList />} />
         <Route path="series/:id" element={<SeriesDetail />} />
 
         {/* Protected routes */}
@@ -49,7 +50,6 @@ function App() {
           <Route path="editor/:id" element={<Editor />} />
           <Route path="drafts" element={<Navigate to="/my-content?tab=drafts" replace />} />
           <Route path="my-content" element={<MyContent />} />
-          <Route path="series" element={<SeriesList />} />
           <Route path="history" element={<ReadHistory />} />
           <Route path="messages" element={<Messages />} />
           <Route path="notifications" element={<Notifications />} />

@@ -17,7 +17,6 @@ export default class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    // 输出错误日志，便于排查白屏问题
     console.error('应用发生未捕获异常:', error, errorInfo)
   }
 
@@ -25,19 +24,27 @@ export default class ErrorBoundary extends Component<Props, State> {
     window.location.reload()
   }
 
+  handleReset = () => {
+    this.setState({ hasError: false })
+  }
+
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-gray-50 px-4 py-10">
-          <div className="mx-auto max-w-2xl">
-            <div className="card py-12 text-center">
-              <h1 className="text-2xl font-bold text-gray-800">页面渲染失败</h1>
-              <p className="mt-2 text-gray-500">已拦截异常，避免白屏。你可以刷新页面后重试。</p>
+        <div className="min-h-screen bg-paper-100 dark:bg-ink-900 text-ink-800 dark:text-ink-50 px-4 py-16 flex items-center justify-center">
+          <div className="mx-auto max-w-xl w-full">
+            <div className="card py-12 text-center hover:transform-none">
+              <h1 className="font-editorial-serif text-2xl font-bold text-ink-900 dark:text-ink-50">
+                页面渲染遇到异常
+              </h1>
+              <p className="mt-2 text-sm text-ink-500 dark:text-ink-400">
+                已拦截前端异常避免白屏，你可以刷新重试或返回博客首页。
+              </p>
               <div className="mt-6 flex items-center justify-center gap-3">
-                <button type="button" onClick={this.handleReload} className="btn btn-primary">
+                <button type="button" onClick={this.handleReload} className="btn btn-primary btn-sm">
                   刷新页面
                 </button>
-                <Link to="/" className="btn btn-secondary">
+                <Link to="/" onClick={this.handleReset} className="btn btn-secondary btn-sm">
                   返回首页
                 </Link>
               </div>

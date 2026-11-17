@@ -60,6 +60,7 @@ nul
 line_counts.txt
 backend/local-settings.xml
 backend/temp-mvn-settings.xml
+backend/settings-empty.xml
 backend-dev.err.log
 backend-dev.out.log
 *.tmp

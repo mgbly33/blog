@@ -41,6 +41,9 @@ public class SecurityConfig {
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        // Explicit authenticated endpoints before broad public wildcards
+                        .requestMatchers("/api/users/me", "/api/users/me/**", "/api/users/notifications/**").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/blogs/liked", "/api/blogs/bookmarks").authenticated()
                         // Public endpoints
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/health/**").permitAll()
@@ -50,18 +53,22 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/blogs/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/categories/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/tags/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/users/{id}").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/users/{id:[0-9]+}").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/users/username/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/users/{id}/followers").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/users/{id}/following").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/comments/blog/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/series/{id}").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/users/{id:[0-9]+}/followers").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/users/{id:[0-9]+}/following").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/comments/blog/**", "/api/comments/*/replies").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/series", "/api/series/*").permitAll()
                         // Admin endpoints
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         // Authenticated endpoints
                         .anyRequest().authenticated())
                 .exceptionHandling(exception -> exception
-                        .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            response.setStatus(HttpStatus.UNAUTHORIZED.value());
+                            response.setContentType("application/json;charset=UTF-8");
+                            response.getWriter().write("{\"success\":false,\"message\":\"请先登录后再操作\"}");
+                        })
                         .accessDeniedHandler((request, response, accessDeniedException) -> {
                             response.setStatus(HttpStatus.FORBIDDEN.value());
                             response.setContentType("application/json;charset=UTF-8");

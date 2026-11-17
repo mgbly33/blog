@@ -67,32 +67,41 @@ public class UserReadHistoryService {
         Map<Long, User> authorMap = userRepository.findAllById(authorIds).stream()
                 .collect(Collectors.toMap(User::getId, Function.identity()));
 
-        List<Map<String, Object>> items = historyPage.getContent().stream().map(h -> {
-            Map<String, Object> item = new LinkedHashMap<>();
-            item.put("id", String.valueOf(h.getId()));
-            item.put("blogId", String.valueOf(h.getBlogId()));
-            item.put("progress", h.getProgress());
-            item.put("scrollPosition", h.getScrollPosition());
-            item.put("lastReadAt", h.getLastReadAt());
+        List<Map<String, Object>> items = historyPage.getContent().stream()
+                .filter(h -> {
+                    Blog blog = blogMap.get(h.getBlogId());
+                    if (blog == null) {
+                        return false;
+                    }
+                    boolean isOwnBlog = userId.equals(blog.getAuthorId());
+                    boolean isPublicApproved = blog.getStatus() == Blog.Status.APPROVED
+                            && blog.getVisibility() == Blog.Visibility.PUBLIC;
+                    return isOwnBlog || isPublicApproved;
+                })
+                .map(h -> {
+                    Map<String, Object> item = new LinkedHashMap<>();
+                    item.put("id", String.valueOf(h.getId()));
+                    item.put("blogId", String.valueOf(h.getBlogId()));
+                    item.put("progress", h.getProgress());
+                    item.put("scrollPosition", h.getScrollPosition());
+                    item.put("lastReadAt", h.getLastReadAt());
 
-            Blog blog = blogMap.get(h.getBlogId());
-            if (blog != null) {
-                item.put("blogTitle", blog.getTitle());
-                item.put("blogSummary", blog.getSummary());
-                item.put("blogImage", blog.getImage());
-                item.put("readTime", blog.getReadTime());
+                    Blog blog = blogMap.get(h.getBlogId());
+                    item.put("blogTitle", blog.getTitle() != null ? blog.getTitle() : "未命名文章");
+                    item.put("blogSummary", blog.getSummary());
+                    item.put("blogImage", blog.getImage());
+                    item.put("readTime", blog.getReadTime() != null ? blog.getReadTime() : 1);
 
-                User author = authorMap.get(blog.getAuthorId());
-                if (author != null) {
-                    item.put("author", AuthorInfo.builder()
-                            .id(author.getId())
-                            .username(author.getUsername())
-                            .avatar(author.getAvatar())
-                            .build());
-                }
-            }
-            return item;
-        }).collect(Collectors.toList());
+                    User author = authorMap.get(blog.getAuthorId());
+                    if (author != null) {
+                        item.put("author", AuthorInfo.builder()
+                                .id(author.getId())
+                                .username(author.getUsername())
+                                .avatar(author.getAvatar())
+                                .build());
+                    }
+                    return item;
+                }).collect(Collectors.toList());
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("content", items);
